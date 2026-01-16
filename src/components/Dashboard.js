@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock } from 'lucide-react';
+import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Trash2 } from 'lucide-react';
 import forge from 'node-forge';
 import { jsPDF } from "jspdf";
 import streamSaver from 'streamsaver';
@@ -677,6 +677,45 @@ export default function Dashboard() {
       console.error("Stream/Decryption Error:", e);
       addLog(`Error: ${e.message}`);
       alert(`Download Error: ${e.message}`);
+    }
+  };
+
+  const deleteMeeting = async (e, meetingId) => {
+    e.stopPropagation(); // Prevent opening the meeting
+
+    const confirmed = window.confirm('⚠️ Delete Meeting?\n\nThis will permanently delete all meeting data including audio, transcript, and summary. This action cannot be undone.\n\nAre you sure you want to continue?');
+
+    if (!confirmed) return;
+
+    try {
+      addLog(`Deleting meeting ${meetingId}...`);
+      const token = await user.getIdToken();
+
+      const response = await fetch(`${API_BASE}/api/meeting/${meetingId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Remove from meetings list
+        setMeetings(prev => prev.filter(m => m.meeting_id !== meetingId));
+        addLog('Meeting deleted successfully.');
+
+        // If we're currently viewing this meeting, reset
+        if (meetingId === meetingId) {
+          reset();
+        }
+      } else {
+        throw new Error(data.error || 'Delete failed');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      addLog(`Failed to delete meeting: ${error.message}`);
+      alert(`Failed to delete meeting: ${error.message}`);
     }
   };
 
