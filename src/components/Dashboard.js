@@ -60,6 +60,9 @@ export default function Dashboard() {
         setPrivateKey(keyPair.privateKey);
         setPublicKeyPem(pem);
         addLog('Session keys generated successfully.');
+
+        // 1. Refresh Persistence: Fetch meetings immediately to restore state
+        fetchMeetings(keyPair.privateKey); // Pass key to allow immediate data fetching if needed, though mostly needed for fetchSecureAudio
       } catch (err) {
         console.error('Key generation failed:', err);
         addLog(`Error generating keys: ${err.message}`);
@@ -84,24 +87,61 @@ export default function Dashboard() {
     }
   };
 
+  // Modified to optionally auto-resume
   const fetchMeetings = async () => {
     try {
       const token = await user.getIdToken();
-      // Mocking the endpoint response if it fails for now, or assume it works
-      // Assuming GET /api/meetings returns { meetings: [...] }
       const response = await fetch(`${API_BASE}/api/meetings?user_id=${user.email}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
         const data = await response.json();
-        setMeetings(data.meetings || []);
+        // Check filtering for invalid meetings without IDs which might crash UI
+        const validMeetings = (data.meetings || []).filter(m => m.meeting_id);
+        setMeetings(validMeetings);
+
+        // Auto-resume logic: Find most recent non-completed meeting?
+        // Or just let user choose from library.
+        // For now, if we are in 'idle' state, maybe show library or just load meetings.
       } else {
-        // Fallback/Mock for demo if endpoint missing
         console.warn("Fetch meetings failed, using empty list");
         setMeetings([]);
       }
     } catch (e) {
       console.error("Error fetching library:", e);
+    }
+  };
+
+  const resumeProcessing = async (e, meetingId) => {
+    e.stopPropagation(); // Prevent opening the meeting details immediately
+    if (!meetingId) return;
+    try {
+      addLog(`Resuming processing for ${meetingId}...`);
+      const token = await user.getIdToken();
+      // 3. Resume / Retry Functionality
+      const res = await fetch(`${API_BASE}/api/retry/${meetingId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Switch UI to processing mode for this meeting
+        setMeetingId(meetingId);
+        setView('new');
+        setStatus('processing');
+        setStatusMessage('Resuming processing...');
+        addLog('Resume signal sent. Polling started.');
+        startPolling(meetingId);
+      } else {
+        throw new Error(data.message || "Retry failed");
+      }
+    } catch (err) {
+      console.error("Resume error:", err);
+      alert(`Failed to resume: ${err.message}`);
     }
   };
 
@@ -228,9 +268,9 @@ export default function Dashboard() {
       if (file.type === "application/pdf") {
         const arrayBuffer = await file.arrayBuffer();
         // Dynamic import pdfjs
-        const pdfjsLib = await import('pdfjs-dist/build/pdf');
-        const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker.default;
+        // eslint-disable-next-line
+        const pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
         const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
         let fullText = "";
@@ -640,12 +680,31 @@ export default function Dashboard() {
               onClick={() => loadHistoricalMeeting(m)}
               className="bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 hover:border-blue-500/50 rounded-xl p-5 cursor-pointer transition-all group">
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold text-lg truncate pr-4">{m.title || `Meeting ${m.meeting_id.substr(0, 8)}`}</h3>
-                <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">{m.date || 'Jan 15'}</span>
+                <h3 className="font-semibold text-lg truncate pr-4">{m.title || `Meeting ${(m.meeting_id || '').substr(0, 8)}`}</h3>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">{m.date || 'Jan 15'}</span>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${m.status === 'completed' ? 'bg-green-900 text-green-400' :
+                    m.status === 'failed' ? 'bg-red-900 text-red-400' :
+                      'bg-blue-900 text-blue-400'
+                    }`}>
+                    {m.status || 'Unknown'}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-                <Clock className="w-4 h-4" />
-                <span>{m.duration || 'Unknown'}</span>
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <Clock className="w-4 h-4" />
+                  <span>{m.duration || 'Unknown'}</span>
+                </div>
+                {/* Resume Button for Stuck Tasks */}
+                {['downloaded', 'transcribing', 'processing', 'in_call_recording'].includes(m.status) && (
+                  <button
+                    onClick={(e) => resumeProcessing(e, m.meeting_id)}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors"
+                  >
+                    Resume
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -814,8 +873,45 @@ export default function Dashboard() {
                           className={`w-full h-48 bg-slate-950 p-4 rounded-lg text-slate-300 font-mono text-sm leading-relaxed border ${isEditing ? 'border-blue-500 focus:ring-1 focus:ring-blue-500' : 'border-slate-800 focus:border-purple-500/50'} outline-none resize-none transition-all`}
                         />
                       ) : (
-                        <div className="w-full h-48 bg-slate-950 p-4 rounded-lg text-slate-300 font-mono text-sm leading-relaxed border border-slate-800 overflow-y-auto">
-                          <p className="text-slate-500 italic">Summary generation would appear here...</p>
+                        <div className="w-full h-48 bg-slate-950 p-4 rounded-lg text-slate-300 font-mono text-sm leading-relaxed border border-slate-800 overflow-y-auto whitespace-pre-wrap">
+                          {
+                            summary ? (
+                              typeof summary === 'string' ? summary : JSON.stringify(summary, null, 2)
+                            ) : (
+                              <p className="text-slate-500 italic">Summary generation in progress or not available...</p>
+                            )}
+                        </div>
+                      )}
+
+                      {/* Summary Action Bar */}
+                      {activeTab === 'summary' && summary && (
+                        <div className="flex justify-end items-center mt-2 gap-2">
+                          <button
+                            onClick={() => {
+                              const text = typeof summary === 'string' ? summary : JSON.stringify(summary, null, 2);
+                              const doc = new jsPDF();
+                              doc.text(doc.splitTextToSize(text, 180), 10, 10);
+                              doc.save(`summary_${meetingId}.pdf`);
+                            }}
+                            className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
+                          >
+                            PDF
+                          </button>
+                          <button
+                            onClick={() => {
+                              const text = typeof summary === 'string' ? summary : JSON.stringify(summary, null, 2);
+                              const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `summary_${meetingId}.txt`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
+                          >
+                            TXT
+                          </button>
                         </div>
                       )}
 
@@ -958,8 +1054,8 @@ export default function Dashboard() {
             </div>
           )}
         </main>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
 
