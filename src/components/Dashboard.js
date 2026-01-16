@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mic, Link2, Download, LogOut, Layout, List, FileText, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock } from 'lucide-react';
 import forge from 'node-forge';
 import { jsPDF } from "jspdf";
 import streamSaver from 'streamsaver';
@@ -388,7 +388,7 @@ export default function Dashboard() {
         const data = await res.json();
 
         // Handle fine-grained status
-        const serverStatus = data.status; // Assuming strict mapping, or check raw_status if available
+        // const serverStatus = data.status; // Unused
         // If data.raw_status exists, use it for specific messaging, otherwise fallback to data.status
         const effectiveStatus = data.raw_status || data.status;
 
@@ -420,6 +420,16 @@ export default function Dashboard() {
             setStatus('processing');
             setStatusMessage("Meeting ended. Processing audio...");
           }
+        } else if (data.status === 'discarded') {
+          // Backend deleted meeting due to no audio
+          stopPolling();
+          setStatus('idle');
+          setStatusMessage('');
+          addLog('Meeting discarded: No audio was recorded.');
+          alert('⚠️ Meeting Discarded\n\nNo audio was recorded for this meeting. The meeting has been removed from your library.');
+          // Remove from meetings list if present
+          setMeetings(prev => prev.filter(m => m.meeting_id !== currentMeetingId));
+          reset();
         } else if (data.status === 'failed' || data.error) {
           stopPolling();
           setStatus('error');
@@ -428,6 +438,13 @@ export default function Dashboard() {
         }
       } catch (err) {
         console.error('Polling error:', err);
+        // Handle 404 (meeting deleted/discarded)
+        if (err.message?.includes('404') || err.status === 404) {
+          stopPolling();
+          addLog('Meeting not found. It may have been discarded.');
+          setMeetings(prev => prev.filter(m => m.meeting_id !== currentMeetingId));
+          reset();
+        }
       }
     }, 5000); // Polling faster (5s) for better responsiveness
   };
@@ -539,7 +556,7 @@ export default function Dashboard() {
       const response = await fetch(`${API_BASE}/api/audio/${meetingId}?user_id=${user.email}`, {
         method: 'GET',
         headers: {
-          'x-public-key': publicKeyPem.replace(/\r\n/g, ''),
+          'x-public-key': publicKeyPem.replace(/[\r\n]+/g, ''),
           'Authorization': `Bearer ${token}`
         }
       });
@@ -610,7 +627,7 @@ export default function Dashboard() {
         const { done, value } = await reader.read();
         if (done) break;
 
-        receivedLength += value.length;
+        // receivedLength += value.length;
 
         // Convert Uint8Array -> Binary String for Forge
         // For efficiency with large chunks, can use a loop or spread if size is safe.
