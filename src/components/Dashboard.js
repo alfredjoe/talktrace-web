@@ -377,7 +377,7 @@ export default function Dashboard() {
         // If data.raw_status exists, use it for specific messaging, otherwise fallback to data.status
         const effectiveStatus = data.raw_status || data.status;
 
-        if (data.audio_ready) {
+        if (data.audio_ready || effectiveStatus === 'completed' || effectiveStatus === 'done') {
           stopPolling();
           setStatus('complete');
           setStatusMessage('Meeting ended. Audio ready!');
