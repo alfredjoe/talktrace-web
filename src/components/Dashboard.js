@@ -98,6 +98,15 @@ export default function Dashboard() {
         const data = await response.json();
         // Check filtering for invalid meetings without IDs which might crash UI
         const validMeetings = (data.meetings || []).filter(m => m.meeting_id);
+        // Sort by date descending (Newest first)
+        // Assuming m.created_at is ISO string, or m.date is parseable. 
+        // If m.date is just "Jan 15", we might need m.created_at from backend. 
+        // Fallback to meeting_id if no date (assuming IDs might be time-based or just stable).
+        validMeetings.sort((a, b) => {
+          const dateA = new Date(a.created_at || a.date || 0);
+          const dateB = new Date(b.created_at || b.date || 0);
+          return dateB - dateA;
+        });
         setMeetings(validMeetings);
 
         // Auto-resume logic: Find most recent non-completed meeting?
@@ -192,11 +201,17 @@ export default function Dashboard() {
   };
 
   const loadHistoricalMeeting = (meeting) => {
+    stopPolling(); // Ensure no background updates interfere
     setMeetingId(meeting.meeting_id);
     setView('new');
     setIsHistorical(true);
     setStatus('complete');
     setStatusMessage('Loaded from Library');
+    setAudioUrl(null); // Clear previous audio
+    setTranscript('');
+    setSummary(null);
+    setLogs([]); // Clear logs from previous session to avoid confusion
+
     // Fetch data immediately
     fetchSecureAudio(meeting.meeting_id);
     fetchData(meeting.meeting_id);
@@ -740,6 +755,15 @@ export default function Dashboard() {
               <List className="w-4 h-4" />
               Previous Work
             </button>
+            {isHistorical && (
+              <button
+                onClick={reset}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 flex items-center gap-2 border-l border-slate-700 ml-2"
+              >
+                <LogOut className="w-4 h-4 rotate-180" />
+                Exit History
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
