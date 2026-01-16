@@ -235,8 +235,6 @@ export default function Dashboard() {
 
       const encryptedKeyB64 = response.headers.get('X-Encrypted-Key');
       if (!encryptedKeyB64) {
-        // Maybe it's not encrypted? Or legacy? Assume encrypted for this flow.
-        // If missing, maybe plain JSON (insecure)? Protocol says encrypted.
         throw new Error("Missing encryption header");
       }
 
@@ -251,14 +249,13 @@ export default function Dashboard() {
       const aesKeyStr = String.fromCharCode(...decryptedView.slice(0, 32));
       const ivStr = String.fromCharCode(...decryptedView.slice(32, 48));
 
-      // Decrypt Body
-      const encryptedBody = await response.text(); // receiving base64 or raw?
-      // Usually API returns JSON. If encrypted, the whole body text is ciphertext (base64).
-      // Assuming backend returns base64 ciphertext in body.
+      // Get encrypted body as ArrayBuffer (binary data, NOT base64 text)
+      const encryptedData = await response.arrayBuffer();
 
+      // Decrypt with AES-CBC
       const decipher = forge.cipher.createDecipher('AES-CBC', forge.util.createBuffer(aesKeyStr));
       decipher.start({ iv: forge.util.createBuffer(ivStr) });
-      decipher.update(forge.util.createBuffer(forge.util.decode64(encryptedBody)));
+      decipher.update(forge.util.createBuffer(encryptedData));
       decipher.finish();
 
       const jsonStr = decipher.output.toString();
