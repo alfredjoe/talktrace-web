@@ -226,7 +226,7 @@ export default function Dashboard() {
 
       const response = await fetch(`${API_BASE}/api/data/${id}?user_id=${user.email}`, {
         headers: {
-          'x-public-key': publicKeyPem.replace(/\r\n/g, ''),
+          'x-public-key': publicKeyPem.replace(/[\r\n]+/g, ''),
           'Authorization': `Bearer ${token}`
         }
       });
@@ -473,7 +473,7 @@ export default function Dashboard() {
       const response = await fetch(`${API_BASE}/api/audio/${id}?user_id=${user.email}`, {
         method: 'GET',
         headers: {
-          'x-public-key': publicKeyPem.replace(/\r\n/g, ''),
+          'x-public-key': publicKeyPem.replace(/[\r\n]+/g, ''),
           'Authorization': `Bearer ${token}`
         }
       });
