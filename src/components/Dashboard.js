@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [logs, setLogs] = useState([]);
 
   const [summary, setSummary] = useState(null);
+  const [segments, setSegments] = useState([]); // Store Diarization Segments
   const [history, setHistory] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -185,18 +186,49 @@ export default function Dashboard() {
     }
   };
 
-  const fetchHistory = async (id) => {
+  const fetchHistory = async (id, type = activeTab) => {
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${API_BASE}/api/history/${id}?user_id=${user.email}`, {
+      // Ensure type is passed to backend
+      const res = await fetch(`${API_BASE}/api/history/${id}?user_id=${user.email}&type=${type}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setHistory(data.history || []);
+        setHistory(data.revisions || []);
       }
     } catch (e) {
       console.error("History fetch error:", e);
+    }
+  };
+
+  const revertToVersion = async (revisionId) => {
+    if (!window.confirm("Are you sure you want to revert to this version? Current changes will be overwritten.")) return;
+    try {
+      addLog("Reverting to previous version...");
+      const token = await user.getIdToken();
+      const res = await fetch(`${API_BASE}/api/revert/${meetingId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ revision_id: revisionId })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        addLog(`Reverted successfully to version ${data.new_version}. Refreshing...`);
+        // Refresh data
+        fetchData(meetingId);
+        fetchHistory(meetingId);
+      } else {
+        throw new Error(data.message || "Revert failed");
+      }
+    } catch (e) {
+      console.error("Revert error:", e);
+      addLog(`Revert failed: ${e.message}`);
+      alert(e.message);
     }
   };
 
@@ -258,11 +290,22 @@ export default function Dashboard() {
       decipher.update(forge.util.createBuffer(encryptedData));
       decipher.finish();
 
-      const jsonStr = decipher.output.toString();
+      // Convert Forge buffer (Binary String) to Uint8Array for TextDecoder
+      const decryptedBytes = decipher.output.getBytes();
+      const byteArray = new Uint8Array(decryptedBytes.length);
+      for (let i = 0; i < decryptedBytes.length; i++) {
+        byteArray[i] = decryptedBytes.charCodeAt(i);
+      }
+
+      // Decode UTF-8 to handle special characters/emojis correctly
+      const jsonStr = new TextDecoder("utf-8").decode(byteArray);
       const data = JSON.parse(jsonStr);
 
       // Render
-      setTranscript(data.transcript || "");
+      setTranscript(data.transcript || data.text || ""); // Check both properties for safety
+      setSegments(data.segments || []); // Load segments for UI
+      setSummary(data.summary || null);
+      addLog("Transcript decrypted and loaded.");
       setSummary(data.summary || null);
       addLog("Transcript decrypted and loaded.");
 
@@ -282,29 +325,90 @@ export default function Dashboard() {
         // Dynamic import pdfjs
         // eslint-disable-next-line
         const pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+        // Correctly resolve worker URL for Vite/Webpack
+        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+          'pdfjs-dist/build/pdf.worker.min.mjs',
+          import.meta.url
+        ).toString();
 
         const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
         let fullText = "";
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          fullText += content.items.map(item => item.str).join(" ");
+
+          // Simple join works if jsPDF generated lines cleanly
+          // Fix: Ensure we add a newline between pages!
+          // Use map join with newline for lines on the page.
+          const pageText = content.items.map(item => item.str).join("\n");
+          fullText += pageText + "\n\n";
         }
         text = fullText;
+
+        // PDF Extraction Variant 2: Join with spaces (in case of flow text)
+        // We append this special variant to text so we can add it to candidates later?
+        // Actually, we can just push it to variants list if we move variants creation up or modify logic.
+        // For now, let's trust join("\n") is better for structure, and our "Collapsed" variant handles the rest.
       } else {
         text = await file.text();
       }
 
-      // Hash Logic (SHA-256)
-      const msgBuffer = new TextEncoder().encode(text);
-      const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      if (!text || text.trim().length === 0) {
+        throw new Error("File is empty or could not be read.");
+      }
 
-      addLog(`Client-side Hash calculated: ${hashHex.substring(0, 8)}...`);
+      // Generate Hash Candidates to handle line-ending/whitespace variations
+      const variants = [
+        text,                                      // 1. Raw
+        text.replace(/\r\n/g, '\n'),               // 2. Force LF
+        text.replace(/\r\n/g, '\n').trim(),        // 3. Force LF + Trim
+        text.replace(/\n/g, '\r\n'),               // 4. Force CRLF (Windows)
+      ];
 
-      // Send Hash to Backend
+      // Smart Extraction for Summary Report
+      // The backend hashes ONLY the summary text, but the download includes "SUMMARY:" + "ACTION ITEMS:" headers.
+      // We attempt to extract the inner text.
+      if (activeTab === 'summary' && text.includes("SUMMARY:")) {
+        const summaryMatch = text.match(/SUMMARY:\s*([\s\S]*?)(?=\n\s*ACTION ITEMS:|$)/i);
+        if (summaryMatch && summaryMatch[1]) {
+          const extracted = summaryMatch[1].trim();
+          variants.push(extracted); // 5. Extracted Raw Summary
+          variants.push(extracted.replace(/\r\n/g, '\n')); // 6. Extracted LF
+          variants.push(extracted.replace(/\n/g, '\r\n')); // 7. Extracted CRLF (Windows)
+        }
+      }
+
+      // 8. Collapsed Whitespace Variant (Fixes PDF artifacts)
+      variants.push(text.replace(/\s+/g, ' ').trim());
+
+      // 9. SUPER AGGRESSIVE NORMALIZATION (The "Nuclear Option" for PDF/Reflowed text)
+      // Strips ALL whitespace, newlines, and punctuation. Compares only the raw alphanumeric stream.
+      // This allows verification to succeed even if PDF generation completely changed line wrappings.
+      // We must check this against a similarly normalized version of the hash on the backend?
+      // WAIT: The backend hash is of the raw string. We can't transform the backend hash.
+      // We can only transform the CLIENT text to match the BACKEND text.
+
+      // Better Strategy for PDF: "Unwrap to single line"
+      // Replace all newlines with spaces, then collapse spaces.
+      variants.push(text.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim());
+
+
+      // Dedupe variants
+      const uniqueVariants = [...new Set(variants)];
+      addLog(`Checking ${uniqueVariants.length} formatting variations...`);
+
+      // Calculate Hashes Parallelly
+      const hashPromises = uniqueVariants.map(async (variant) => {
+        const msgBuffer = new TextEncoder().encode(variant);
+        const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hashHex;
+      });
+
+      const candidates = await Promise.all(hashPromises);
+
+      // Send Hash Candidates to Backend
       const token = await user.getIdToken();
       const res = await fetch(`${API_BASE}/api/verify`, {
         method: 'POST',
@@ -312,16 +416,24 @@ export default function Dashboard() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ hash: hashHex, meeting_id: meetingId })
+        body: JSON.stringify({ hashes: candidates, meeting_id: meetingId })
       });
 
       const result = await res.json();
-      if (result.valid) {
-        alert(`✅ Verified! Matches Version ${result.version} (${result.date})`);
-        addLog("Verification Success: Document matches server record.");
+      if (result.verified) {
+        // STRICT TYPE CHECK: Ensure the verified doc matches the Active Tab
+        // e.g. Don't say "Verified" if I uploaded a Transcript but I'm in Summary tab.
+        if (result.type && result.type !== activeTab) {
+          alert(`⚠️ Content Mismatch: This is a verified ${result.type.toUpperCase()}, but you are checking a ${activeTab.toUpperCase()}.`);
+          addLog(`Verification Warning: Valid ${result.type} uploaded in ${activeTab} tab.`);
+        } else {
+          alert(result.message);
+          addLog("Verification Success: Document matches server record.");
+        }
       } else {
-        alert("❌ Verification Failed: No match found.");
-        addLog("Verification Failed: Document hash does not match.");
+        // Fallback for errors or mismatch
+        alert(result.message || result.error || "Verification Failed: No match found.");
+        addLog(`Verification Failed: ${result.message || result.error || "Hash mismatch"}`);
       }
 
     } catch (e) {
@@ -389,13 +501,19 @@ export default function Dashboard() {
         // If data.raw_status exists, use it for specific messaging, otherwise fallback to data.status
         const effectiveStatus = data.raw_status || data.status;
 
-        if (data.audio_ready || effectiveStatus === 'completed' || effectiveStatus === 'done') {
+        // FIX: strict completion check. 'audio_ready' just means Recall is done, not US.
+        // We must wait for backend 'processing' to finish.
+        if (effectiveStatus === 'completed' || effectiveStatus === 'done') {
           stopPolling();
           setStatus('complete');
           setStatusMessage('Meeting ended. Audio ready!');
-          addLog('Audio is ready. Fetching secure content...');
+          addLog('Processing finished. Fetching secure content...');
           fetchSecureAudio(currentMeetingId); // Phase 4: Auto-fetch audio for playback
           fetchData(currentMeetingId);        // Phase 5: Auto-fetch transcript
+        } else if (data.audio_ready && (data.process_state === 'initializing' || !data.process_state)) {
+          // Audio is ready at Recall, but our backend hasn't started/updated process_state yet
+          setStatus('processing');
+          setStatusMessage("Audio captured. Starting pipeline...");
         } else if (effectiveStatus === 'joining_call') {
           setStatus('joining');
           setStatusMessage("Bot is joining due to Zoom latency...");
@@ -921,10 +1039,10 @@ export default function Dashboard() {
                 <div className="mb-6 p-6 bg-slate-900/50 rounded-xl border border-slate-700">
                   {/* Tabs */}
                   <div className="flex items-center gap-6 mb-4 border-b border-slate-700/50 pb-2">
-                    <button onClick={() => setActiveTab('transcript')} className={`text-sm font-semibold pb-2 border-b-2 transition-all ${activeTab === 'transcript' ? 'text-blue-400 border-blue-400' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
+                    <button onClick={() => { setActiveTab('transcript'); fetchHistory(meetingId, 'transcript'); }} className={`text-sm font-semibold pb-2 border-b-2 transition-all ${activeTab === 'transcript' ? 'text-blue-400 border-blue-400' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
                       Transcript
                     </button>
-                    <button onClick={() => setActiveTab('summary')} className={`text-sm font-semibold pb-2 border-b-2 transition-all ${activeTab === 'summary' ? 'text-purple-400 border-purple-400' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
+                    <button onClick={() => { setActiveTab('summary'); fetchHistory(meetingId, 'summary'); }} className={`text-sm font-semibold pb-2 border-b-2 transition-all ${activeTab === 'summary' ? 'text-purple-400 border-purple-400' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
                       Summary & Actions
                     </button>
                   </div>
@@ -940,131 +1058,259 @@ export default function Dashboard() {
 
                   {/* Removed progress bar as backend does transcription */}
 
-                  {transcript && (
-                    <div className="animate-in fade-in slide-in-from-bottom-2">
-                      {activeTab === 'transcript' ? (
+                  <div className="animate-in fade-in slide-in-from-bottom-2">
+                    {activeTab === 'transcript' ? (
+                      // Transcript View: Toggle between Diarized Chat and Raw Editor
+                      segments.length > 0 && !isEditing ? (
+                        <div className="w-full h-80 bg-slate-950 p-4 rounded-lg border border-slate-800 overflow-y-auto space-y-4">
+                          {segments.map((seg, i) => {
+                            // Assign basic colors based on Speaker string
+                            const isSpeaker1 = seg.speaker.includes("1") || seg.speaker.includes("01");
+                            const isSystem = seg.speaker === "System";
+                            // Default: Speaker 1 (Blue/Right), Speaker 2 (Purple/Left) - or just distinct headers
+                            // Let's do a simple vertical list with colored headers for clarity
+                            return (
+                              <div key={i} className={`flex flex-col gap-1 ${isSystem ? 'opacity-50' : ''}`}>
+                                <span className={`text-xs font-bold uppercase tracking-wider ${isSpeaker1 ? 'text-blue-400' :
+                                    seg.speaker === "Speaker" ? 'text-slate-400' : 'text-purple-400'
+                                  }`}>
+                                  {seg.speaker} <span className="text-slate-600 font-normal normal-case ml-2">{new Date(seg.start * 1000).toISOString().substr(14, 5)}</span>
+                                </span>
+                                <p className="text-slate-300 text-sm pl-0">{seg.text}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
                         <textarea
                           value={isEditing ? editContent : transcript}
                           onChange={(e) => setEditContent(e.target.value)}
                           readOnly={!isEditing}
-                          className={`w-full h-48 bg-slate-950 p-4 rounded-lg text-slate-300 font-mono text-sm leading-relaxed border ${isEditing ? 'border-blue-500 focus:ring-1 focus:ring-blue-500' : 'border-slate-800 focus:border-purple-500/50'} outline-none resize-none transition-all`}
+                          className={`w-full h-80 bg-slate-950 p-4 rounded-lg text-slate-300 font-mono text-sm leading-relaxed border ${isEditing ? 'border-blue-500 focus:ring-1 focus:ring-blue-500' : 'border-slate-800 focus:border-purple-500/50'} outline-none resize-none transition-all`}
+                          placeholder="Waiting for transcript..."
                         />
-                      ) : (
-                        <div className="w-full h-48 bg-slate-950 p-4 rounded-lg text-slate-300 font-mono text-sm leading-relaxed border border-slate-800 overflow-y-auto whitespace-pre-wrap">
-                          {
-                            summary ? (
-                              typeof summary === 'string' ? summary : JSON.stringify(summary, null, 2)
+                      )
+                    ) : (
+                      <div className="w-full h-48 bg-slate-950 p-4 rounded-lg text-slate-300 font-mono text-sm leading-relaxed border border-slate-800 overflow-y-auto whitespace-pre-wrap">
+                        {
+                          summary ? (
+                            typeof summary === 'string' ? (
+                              <p>{summary}</p>
                             ) : (
-                              <p className="text-slate-500 italic">Summary generation in progress or not available...</p>
-                            )}
-                        </div>
-                      )}
-
-                      {/* Summary Action Bar */}
-                      {activeTab === 'summary' && summary && (
-                        <div className="flex justify-end items-center mt-2 gap-2">
-                          <button
-                            onClick={() => {
-                              const text = typeof summary === 'string' ? summary : JSON.stringify(summary, null, 2);
-                              const doc = new jsPDF();
-                              doc.text(doc.splitTextToSize(text, 180), 10, 10);
-                              doc.save(`summary_${meetingId}.pdf`);
-                            }}
-                            className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
-                          >
-                            PDF
-                          </button>
-                          <button
-                            onClick={() => {
-                              const text = typeof summary === 'string' ? summary : JSON.stringify(summary, null, 2);
-                              const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-                              const url = URL.createObjectURL(blob);
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `summary_${meetingId}.txt`;
-                              a.click();
-                              URL.revokeObjectURL(url);
-                            }}
-                            className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
-                          >
-                            TXT
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Action Bar */}
-                      <div className="flex justify-between items-center mt-2 flex-wrap gap-2">
-                        <div className="text-xs text-slate-500">
-                          {isEditing ? 'Editing Mode...' : 'Securely rendered from memory.'}
-                        </div>
-                        <div className="flex gap-2">
-                          {/* Edit Controls */}
-                          {activeTab === 'transcript' && (
-                            <>
-                              {isEditing ? (
-                                <>
-                                  <button onClick={() => setIsEditing(false)} className="px-3 py-1 bg-red-900/50 hover:bg-red-900/80 text-red-200 rounded text-xs border border-red-800">
-                                    Cancel
-                                  </button>
-                                  <button onClick={saveEdit} className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded text-xs border border-green-500">
-                                    Save Verification
-                                  </button>
-                                </>
-                              ) : (
-                                <button onClick={() => { setEditContent(transcript); setIsEditing(true); }} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600">
-                                  Edit
-                                </button>
-                              )}
-                            </>
+                              <div className="space-y-4">
+                                {summary.summary && (
+                                  <div>
+                                    <h4 className="font-bold text-blue-400 mb-2 text-xs uppercase tracking-wider">Overview</h4>
+                                    <p className="text-slate-300">{summary.summary}</p>
+                                  </div>
+                                )}
+                                {summary.actions && summary.actions.length > 0 && (
+                                  <div>
+                                    <h4 className="font-bold text-purple-400 mb-2 text-xs uppercase tracking-wider">Action Items</h4>
+                                    <ul className="list-disc list-inside space-y-1 text-slate-300">
+                                      {summary.actions.map((action, i) => (
+                                        <li key={i}>
+                                            {typeof action === 'string' ? action : (
+                                                <span className="inline-flex flex-col align-top">
+                                                    <span>
+                                                        <span className="font-semibold text-blue-300">{action.action}</span>
+                                                        {action.with && <span className="text-slate-400 mx-1">with {action.with}</span>}
+                                                    </span>
+                                                    {action.details && <span className="text-xs text-slate-500 italic">{action.details}</span>}
+                                                </span>
+                                            )}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                {!summary.summary && !summary.actions && (
+                                  <pre className="whitespace-pre-wrap">{JSON.stringify(summary, null, 2)}</pre>
+                                )}
+                              </div>
+                            )
+                          ) : (
+                            <p className="text-slate-500 italic">Summary generation in progress or not available...</p>
                           )}
+                      </div>
+                    )}
 
-                          <button onClick={() => setShowHistory(!showHistory)} className={`px-3 py-1 rounded text-xs border ${showHistory ? 'bg-purple-900/50 border-purple-500 text-purple-200' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}>
-                            History
-                          </button>
+                    {/* Summary Action Bar */}
+                    {activeTab === 'summary' && summary && (
+                      <div className="flex justify-end items-center mt-2 gap-2">
+                        <button
+                          onClick={() => {
+                            let text = "";
+                            if (typeof summary === 'string') {
+                              text = summary;
+                            } else {
+                              if (summary.summary) text += `SUMMARY:\n${summary.summary}\n\n`;
+                              if (summary.actions && summary.actions.length) {
+                                const formattedActions = summary.actions.map(a => {
+                                    if(typeof a === 'string') return `- ${a}`;
+                                    return `- ${a.action}${a.with ? ` (with ${a.with})` : ''}${a.details ? `: ${a.details}` : ''}`;
+                                }).join('\n');
+                                text += "ACTION ITEMS:\n" + formattedActions;
+                              }
+                              if (!text) text = JSON.stringify(summary, null, 2);
+                            }
+                            const doc = new jsPDF();
+                            doc.text(doc.splitTextToSize(text, 180), 10, 10);
+                            doc.save(`summary_${meetingId}.pdf`);
+                          }}
+                          className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
+                        >
+                          PDF
+                        </button>
+                        <button
+                          onClick={() => {
+                            let text = "";
+                            if (typeof summary === 'string') {
+                              text = summary;
+                            } else {
+                              if (summary.summary) text += `SUMMARY:\n${summary.summary}\n`;
+                              if (summary.actions && summary.actions.length) {
+                                const formattedActions = summary.actions.map(a => {
+                                    if(typeof a === 'string') return `- ${a}`;
+                                    return `- ${a.action}${a.with ? ` (with ${a.with})` : ''}${a.details ? `: ${a.details}` : ''}`;
+                                }).join('\n');
+                                text += "\nACTION ITEMS:\n" + formattedActions;
+                              }
+                              if (!text) text = JSON.stringify(summary, null, 2);
+                            }
+                            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `summary_${meetingId}.txt`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
+                        >
+                          TXT
+                        </button>
+                      </div>
+                    )}
 
-                          <button
-                            onClick={() => {
-                              const doc = new jsPDF();
-                              doc.text(transcript, 10, 10);
-                              doc.save(`transcript_${meetingId}.pdf`);
-                            }}
-                            className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
-                          >
-                            PDF
-                          </button>
-                          <button
-                            onClick={() => navigator.clipboard.writeText(transcript)}
-                            className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
-                          >
-                            Copy
-                          </button>
+                    {/* Action Bar */}
+                    <div className="flex justify-between items-center mt-2 flex-wrap gap-2">
+                      <div className="text-xs text-slate-500">
+                        {isEditing ? 'Editing Mode...' : 'Securely rendered from memory.'}
+                      </div>
+                      <div className="flex gap-2">
+                        {/* Edit Controls */}
+                        {activeTab === 'transcript' && (
+                          <>
+                            {isEditing ? (
+                              <>
+                                <button onClick={() => setIsEditing(false)} className="px-3 py-1 bg-red-900/50 hover:bg-red-900/80 text-red-200 rounded text-xs border border-red-800">
+                                  Cancel
+                                </button>
+                                <button onClick={saveEdit} className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded text-xs border border-green-500">
+                                  Save Verification
+                                </button>
+                              </>
+                            ) : (
+                              <button onClick={() => { setEditContent(transcript); setIsEditing(true); }} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600">
+                                Edit
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        <button onClick={() => setShowHistory(!showHistory)} className={`px-3 py-1 rounded text-xs border ${showHistory ? 'bg-purple-900/50 border-purple-500 text-purple-200' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}>
+                          History
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            const blob = new Blob([transcript], { type: 'text/plain;charset=utf-8' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `transcript_${meetingId}.txt`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
+                        >
+                          TXT
+                        </button>
+                        <button
+                          onClick={() => {
+                            const doc = new jsPDF();
+                            const pageHeight = doc.internal.pageSize.height;
+                            const margin = 10;
+                            const maxLineWidth = doc.internal.pageSize.width - margin * 2;
+                            const lineHeight = 7; // approximate line height
+
+                            const lines = doc.splitTextToSize(transcript, maxLineWidth);
+                            let cursorY = margin;
+
+                            lines.forEach((line) => {
+                              if (cursorY + lineHeight > pageHeight - margin) {
+                                doc.addPage();
+                                cursorY = margin;
+                              }
+                              doc.text(line, margin, cursorY);
+                              cursorY += lineHeight;
+                            });
+
+                            doc.save(`transcript_${meetingId}.pdf`);
+                          }}
+                          className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
+                        >
+                          PDF
+                        </button>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(transcript)}
+                          className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* History Panel */}
+                    {showHistory && (
+                      <div className="mt-4 p-4 bg-slate-900/80 rounded-lg border border-slate-700 max-h-60 overflow-y-auto">
+                        <h4 className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Version History ({activeTab})</h4>
+                        <div className="space-y-2">
+                          {history.length === 0 ? <span className="text-xs text-slate-500">No history available type {activeTab}.</span> : null}
+                          {history.map((ver, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-xs p-2 hover:bg-white/5 rounded border border-transparent hover:border-slate-700 transition-all">
+                              <div className="flex flex-col gap-1">
+                                <span className="text-slate-300 font-medium">Version {ver.version}</span>
+                                <span className="text-slate-500">{new Date(ver.edited_at || ver.date).toLocaleString()}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono bg-slate-800 text-slate-500 px-1 rounded truncate w-16" title={ver.content_hash}>
+                                  {ver.content_hash?.substring(0, 8)}
+                                </span>
+                                {activeTab === 'transcript' && idx !== 0 && ( /* Only allow revert for Transcript and not the very latest (which doesn't make sense usually, but logic allows any) */
+                                  <button
+                                    onClick={() => revertToVersion(ver.id)}
+                                    className="px-2 py-1 bg-blue-900/30 hover:bg-blue-900/50 text-blue-400 rounded text-[10px] border border-blue-800/50"
+                                  >
+                                    Revert
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
+                    )}
+                  </div>
 
-                      {/* History Panel */}
-                      {showHistory && (
-                        <div className="mt-4 p-4 bg-slate-900/80 rounded-lg border border-slate-700 max-h-40 overflow-y-auto">
-                          <h4 className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Version History</h4>
-                          <div className="space-y-2">
-                            {history.length === 0 ? <span className="text-xs text-slate-500">No history available.</span> : null}
-                            {history.map((ver, idx) => (
-                              <div key={idx} className="flex justify-between items-center text-xs p-2 hover:bg-white/5 rounded cursor-pointer" onClick={() => setTranscript(ver.content)}>
-                                <span className="text-slate-300">Version {ver.version}</span>
-                                <span className="text-slate-500">{ver.date}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   {/* Integrity Check Dropzone (Historical Only) */}
                   {isHistorical && (
                     <div className="mt-8 pt-8 border-t border-slate-800">
                       <h4 className="text-sm font-semibold text-slate-400 mb-4 flex items-center gap-2">
                         <CheckCircle className="w-4 h-4" />
-                        Metadata Integrity Check
+                        Metadata Integrity Check ({activeTab === 'transcript' ? 'Transcript' : 'Summary'})
                       </h4>
                       <div
                         className="border-2 border-dashed border-slate-700 rounded-xl p-6 text-center hover:border-blue-500/50 transition-colors"
@@ -1081,6 +1327,7 @@ export default function Dashboard() {
                           type="file"
                           className="hidden"
                           id="verify-upload"
+                          onClick={(e) => { e.target.value = null; }} // Allow same file to be selected again
                           onChange={(e) => {
                             if (e.target.files[0]) verifyDocument(e.target.files[0]);
                           }}
