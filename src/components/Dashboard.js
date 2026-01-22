@@ -1059,6 +1059,7 @@ export default function Dashboard() {
                   {/* Removed progress bar as backend does transcription */}
 
                   <div className="animate-in fade-in slide-in-from-bottom-2">
+
                     {activeTab === 'transcript' ? (
                       // Transcript View: Toggle between Diarized Chat and Raw Editor
                       segments.length > 0 && !isEditing ? (
@@ -1072,7 +1073,7 @@ export default function Dashboard() {
                             return (
                               <div key={i} className={`flex flex-col gap-1 ${isSystem ? 'opacity-50' : ''}`}>
                                 <span className={`text-xs font-bold uppercase tracking-wider ${isSpeaker1 ? 'text-blue-400' :
-                                    seg.speaker === "Speaker" ? 'text-slate-400' : 'text-purple-400'
+                                  seg.speaker === "Speaker" ? 'text-slate-400' : 'text-purple-400'
                                   }`}>
                                   {seg.speaker} <span className="text-slate-600 font-normal normal-case ml-2">{new Date(seg.start * 1000).toISOString().substr(14, 5)}</span>
                                 </span>
@@ -1110,15 +1111,15 @@ export default function Dashboard() {
                                     <ul className="list-disc list-inside space-y-1 text-slate-300">
                                       {summary.actions.map((action, i) => (
                                         <li key={i}>
-                                            {typeof action === 'string' ? action : (
-                                                <span className="inline-flex flex-col align-top">
-                                                    <span>
-                                                        <span className="font-semibold text-blue-300">{action.action}</span>
-                                                        {action.with && <span className="text-slate-400 mx-1">with {action.with}</span>}
-                                                    </span>
-                                                    {action.details && <span className="text-xs text-slate-500 italic">{action.details}</span>}
-                                                </span>
-                                            )}
+                                          {typeof action === 'string' ? action : (
+                                            <span className="inline-flex flex-col align-top">
+                                              <span>
+                                                <span className="font-semibold text-blue-300">{action.action}</span>
+                                                {action.with && <span className="text-slate-400 mx-1">with {action.with}</span>}
+                                              </span>
+                                              {action.details && <span className="text-xs text-slate-500 italic">{action.details}</span>}
+                                            </span>
+                                          )}
                                         </li>
                                       ))}
                                     </ul>
@@ -1147,8 +1148,8 @@ export default function Dashboard() {
                               if (summary.summary) text += `SUMMARY:\n${summary.summary}\n\n`;
                               if (summary.actions && summary.actions.length) {
                                 const formattedActions = summary.actions.map(a => {
-                                    if(typeof a === 'string') return `- ${a}`;
-                                    return `- ${a.action}${a.with ? ` (with ${a.with})` : ''}${a.details ? `: ${a.details}` : ''}`;
+                                  if (typeof a === 'string') return `- ${a}`;
+                                  return `- ${a.action}${a.with ? ` (with ${a.with})` : ''}${a.details ? `: ${a.details}` : ''}`;
                                 }).join('\n');
                                 text += "ACTION ITEMS:\n" + formattedActions;
                               }
@@ -1171,8 +1172,8 @@ export default function Dashboard() {
                               if (summary.summary) text += `SUMMARY:\n${summary.summary}\n`;
                               if (summary.actions && summary.actions.length) {
                                 const formattedActions = summary.actions.map(a => {
-                                    if(typeof a === 'string') return `- ${a}`;
-                                    return `- ${a.action}${a.with ? ` (with ${a.with})` : ''}${a.details ? `: ${a.details}` : ''}`;
+                                  if (typeof a === 'string') return `- ${a}`;
+                                  return `- ${a.action}${a.with ? ` (with ${a.with})` : ''}${a.details ? `: ${a.details}` : ''}`;
                                 }).join('\n');
                                 text += "\nACTION ITEMS:\n" + formattedActions;
                               }
