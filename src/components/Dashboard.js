@@ -19,6 +19,8 @@ export default function Dashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [editContent, setEditContent] = useState('');
+  const [editSegments, setEditSegments] = useState([]); // Editable segments
+  const [viewingVersion, setViewingVersion] = useState(null); // ID of version being viewed (if not latest)
 
   const [statusMessage, setStatusMessage] = useState('');
   const API_BASE = 'http://localhost:3002'; // Assuming this was missing and needs to be added
@@ -167,6 +169,7 @@ export default function Dashboard() {
         },
         body: JSON.stringify({
           text: editContent,
+          segments: editSegments.length > 0 ? editSegments : segments, // Send updated segments
           user_id: user.email
         })
       });
@@ -202,10 +205,52 @@ export default function Dashboard() {
     }
   };
 
-  const revertToVersion = async (revisionId) => {
-    if (!window.confirm("Are you sure you want to revert to this version? Current changes will be overwritten.")) return;
+  const fetchRevisionContent = async (versionNumber) => {
     try {
-      addLog("Reverting to previous version...");
+      addLog(`Loading version ${versionNumber} snapshot...`);
+      const token = await user.getIdToken();
+      // Use new Snapshot API
+      const res = await fetch(`${API_BASE}/api/meeting/${meetingId}/version/${versionNumber}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const snap = data.snapshot; // { transcript:..., summary:... }
+
+        if (snap.transcript) {
+          setTranscript(snap.transcript.text || "");
+          setSegments(snap.transcript.segments || []);
+        }
+
+        if (snap.summary) {
+          setSummary(snap.summary);
+        } else {
+          setSummary("No summary for this version.");
+        }
+
+        setViewingVersion(versionNumber);
+        addLog(`Loaded Version ${versionNumber}.`);
+      } else {
+        throw new Error("Failed to load snapshot");
+      }
+    } catch (e) {
+      console.error("View error:", e);
+      addLog(`View failed: ${e.message}`);
+    }
+  };
+
+  const revertToVersion = async (targetVersion) => {
+    // Find the specific revision ID for this transcript version to satisfy backend API
+    const targetRev = history.find(h => h.version === targetVersion);
+    if (!targetRev) {
+      alert("Could not identify revision ID to restore.");
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to restore Version ${targetVersion}? This will create a new Active version.`)) return;
+    try {
+      addLog("Restoring version...");
       const token = await user.getIdToken();
       const res = await fetch(`${API_BASE}/api/revert/${meetingId}`, {
         method: 'POST',
@@ -213,13 +258,13 @@ export default function Dashboard() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ revision_id: revisionId })
+        body: JSON.stringify({ revision_id: targetRev.id })
       });
 
       const data = await res.json();
       if (data.success) {
-        addLog(`Reverted successfully to version ${data.new_version}. Refreshing...`);
-        // Refresh data
+        addLog(`Restored successfully. New version: ${data.new_version}`);
+        setViewingVersion(null); // Reset view mode since we are now on latest
         fetchData(meetingId);
         fetchHistory(meetingId);
       } else {
@@ -231,6 +276,8 @@ export default function Dashboard() {
       alert(e.message);
     }
   };
+
+
 
   const loadHistoricalMeeting = (meeting) => {
     stopPolling(); // Ensure no background updates interfere
@@ -244,10 +291,41 @@ export default function Dashboard() {
     setSummary(null);
     setLogs([]); // Clear logs from previous session to avoid confusion
 
-    // Fetch data immediately
     fetchSecureAudio(meeting.meeting_id);
     fetchData(meeting.meeting_id);
     fetchHistory(meeting.meeting_id);
+    setViewingVersion(null); // Ensure we start fresh
+  };
+
+  const regenerateSummary = async () => {
+    try {
+      setStatusMessage('Regenerating Summary with AI...');
+      addLog('Sending regeneration request... (This may take a moment)');
+      const token = await user.getIdToken();
+      const res = await fetch(`${API_BASE}/api/regenerate_summary/${meetingId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        addLog('Regeneration complete.');
+
+        // Refresh data
+        await fetchHistory(meetingId);
+        await fetchData(meetingId);
+
+        alert("Summary Regenerated successfully! A new version has been added to History.");
+        setStatusMessage('Regeneration Complete');
+        setTimeout(() => setStatusMessage(''), 3000);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (e) {
+      console.error(e);
+      addLog(`Regeneration failed: ${e.message}`);
+      alert("Failed to regenerate summary: " + e.message);
+      setStatusMessage('');
+    }
   };
 
   const fetchData = async (id) => {
@@ -1061,28 +1139,97 @@ export default function Dashboard() {
                   <div className="animate-in fade-in slide-in-from-bottom-2">
 
                     {activeTab === 'transcript' ? (
-                      // Transcript View: Toggle between Diarized Chat and Raw Editor
-                      segments.length > 0 && !isEditing ? (
-                        <div className="w-full h-80 bg-slate-950 p-4 rounded-lg border border-slate-800 overflow-y-auto space-y-4">
-                          {segments.map((seg, i) => {
-                            // Assign basic colors based on Speaker string
-                            const isSpeaker1 = seg.speaker.includes("1") || seg.speaker.includes("01");
-                            const isSystem = seg.speaker === "System";
-                            // Default: Speaker 1 (Blue/Right), Speaker 2 (Purple/Left) - or just distinct headers
-                            // Let's do a simple vertical list with colored headers for clarity
-                            return (
-                              <div key={i} className={`flex flex-col gap-1 ${isSystem ? 'opacity-50' : ''}`}>
-                                <span className={`text-xs font-bold uppercase tracking-wider ${isSpeaker1 ? 'text-blue-400' :
-                                  seg.speaker === "Speaker" ? 'text-slate-400' : 'text-purple-400'
-                                  }`}>
-                                  {seg.speaker} <span className="text-slate-600 font-normal normal-case ml-2">{new Date(seg.start * 1000).toISOString().substr(14, 5)}</span>
-                                </span>
-                                <p className="text-slate-300 text-sm pl-0">{seg.text}</p>
+                      // Transcript View: Toggle between Diarized Chat and Segment Editor
+                      segments.length > 0 ? (
+                        isEditing ? (
+                          // EDIT MODE: Segment Editor
+                          <div className="w-full h-80 bg-slate-950 p-4 rounded-lg border border-blue-500/50 overflow-y-auto space-y-4">
+                            {editSegments.map((seg, i) => (
+                              <div key={i} className="flex flex-col gap-2 p-3 bg-slate-900/50 rounded border border-slate-800">
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    value={new Date(seg.start * 1000).toISOString().substr(14, 5)}
+                                    // Simple Time Parser (MM:SS -> seconds) could be added, but for now just display read-only or string
+                                    // For full edit, we'd need parsing logic. Let's make it text for now, but strictly formatted?
+                                    // User asked to "edit timestamp". 
+                                    // Let's assume user edits text like "00:12" and we parse it back to seconds on save?
+                                    // Or just store as string in segments? Backend expects 'start' as float number for verify?
+                                    // Pipeline uses 'start' for sorting? 
+                                    // Let's keep it simple: Text Input that updates a temp string, parsed on save? 
+                                    // Or just allow editing 'speaker' and 'text' easily, timestamp is harder without validation.
+                                    // User asked "edit name and time stamp".
+                                    // I'll allow editing a "startTimeStr" field if I process it. 
+                                    // For now, let's just make Speaker editable easily. 
+                                    // To allow Time editing, I'll store it as 'startTime' string in editSegments.
+                                    onChange={(e) => {
+                                      const newSegs = [...editSegments];
+                                      // constant time parsing or just store string
+                                      // backend mostly uses it for display, except standardisation
+                                      // Let's just update the start time in seconds if valid
+                                      const parts = e.target.value.split(':');
+                                      if (parts.length === 2) {
+                                        const mins = parseInt(parts[0]);
+                                        const secs = parseInt(parts[1]);
+                                        if (!isNaN(mins) && !isNaN(secs)) newSegs[i].start = mins * 60 + secs;
+                                      }
+                                      setEditSegments(newSegs);
+                                    }}
+                                    className="bg-slate-950 text-slate-400 text-xs w-16 p-1 rounded border border-slate-700 text-center"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={seg.speaker}
+                                    onChange={(e) => {
+                                      const newSegs = [...editSegments];
+                                      newSegs[i].speaker = e.target.value;
+                                      setEditSegments(newSegs);
+                                    }}
+                                    className="bg-slate-950 text-blue-400 font-bold text-xs flex-1 p-1 rounded border border-slate-700 uppercase tracking-wider"
+                                  />
+                                </div>
+                                <textarea
+                                  value={seg.text}
+                                  onChange={(e) => {
+                                    const newSegs = [...editSegments];
+                                    newSegs[i].text = e.target.value;
+                                    setEditSegments(newSegs);
+                                  }}
+                                  className="w-full bg-slate-950 text-slate-300 text-sm p-2 rounded border border-slate-800 focus:border-blue-500/50 outline-none resize-none h-20"
+                                />
                               </div>
-                            );
-                          })}
-                        </div>
+                            ))}
+                          </div>
+                        ) : (
+                          // READ MODE: Diarized View
+                          <div className="w-full h-80 bg-slate-950 p-4 rounded-lg border border-slate-800 overflow-y-auto space-y-4 relative">
+                            {viewingVersion && (
+                              <div className="sticky top-0 z-10 bg-slate-800/90 text-slate-300 text-xs px-4 py-2 rounded mb-4 shadow-lg backdrop-blur-sm border border-slate-700/50 flex justify-between items-center">
+                                <span className="flex items-center gap-2">
+                                  <span>👁️ Viewing Version {viewingVersion}</span>
+                                  <span className="text-[10px] bg-slate-700 px-2 rounded text-slate-400 uppercase tracking-widest">Snapshot</span>
+                                </span>
+
+                              </div>
+                            )}
+                            {segments.map((seg, i) => {
+                              const isSpeaker1 = seg.speaker.includes("1") || seg.speaker.includes("01");
+                              const isSystem = seg.speaker === "System";
+                              return (
+                                <div key={i} className={`flex flex-col gap-1 ${isSystem ? 'opacity-50' : ''}`}>
+                                  <span className={`text-xs font-bold uppercase tracking-wider ${isSpeaker1 ? 'text-blue-400' :
+                                    seg.speaker === "Speaker" ? 'text-slate-400' : 'text-purple-400'
+                                    }`}>
+                                    {seg.speaker} <span className="text-slate-600 font-normal normal-case ml-2">{new Date(seg.start * 1000).toISOString().substr(14, 5)}</span>
+                                  </span>
+                                  <p className="text-slate-300 text-sm pl-0">{seg.text}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )
                       ) : (
+                        // Fallback for no segments (Legacy Transcripts)
                         <textarea
                           value={isEditing ? editContent : transcript}
                           onChange={(e) => setEditContent(e.target.value)}
@@ -1131,14 +1278,45 @@ export default function Dashboard() {
                               </div>
                             )
                           ) : (
-                            <p className="text-slate-500 italic">Summary generation in progress or not available...</p>
+                            <div className="flex flex-col items-center justify-center h-48 gap-4">
+                              <p className="text-slate-500 italic">Summary generation in progress or not available...</p>
+                              <button
+                                onClick={regenerateSummary}
+                                className="px-4 py-2 bg-purple-900/40 border border-purple-500/50 hover:bg-purple-900/60 rounded-lg text-xs text-purple-200 transition-all flex items-center gap-2"
+                              >
+                                ✨ Generate with AI
+                              </button>
+                            </div>
                           )}
+
+                        {/* Regenerate Option for Simulated Summaries */}
+                        {typeof summary === 'string' && summary.includes("simulated") && (
+                          <div className="mt-4 border-t border-slate-800 pt-4 flex justify-between items-center">
+                            <span className="text-xs text-slate-500">This appears to be a mock summary.</span>
+                            <button
+                              onClick={regenerateSummary}
+                              className="px-3 py-1 bg-purple-900/30 hover:bg-purple-900/50 border border-purple-800 rounded text-xs text-purple-300"
+                            >
+                              ✨ Regenerate with AI
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
                     {/* Summary Action Bar */}
                     {activeTab === 'summary' && summary && (
                       <div className="flex justify-end items-center mt-2 gap-2">
+                        {/* Always show Regenerate button in Action Bar for visibility */}
+                        {!viewingVersion && (
+                          <button
+                            onClick={regenerateSummary}
+                            className="px-3 py-1 bg-purple-900/40 hover:bg-purple-900/60 rounded text-xs text-purple-200 border border-purple-500/50 flex items-center gap-1"
+                            title="Regenerate summary with AI"
+                          >
+                            <span>✨ Regenerate</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             let text = "";
@@ -1197,11 +1375,11 @@ export default function Dashboard() {
                     {/* Action Bar */}
                     <div className="flex justify-between items-center mt-2 flex-wrap gap-2">
                       <div className="text-xs text-slate-500">
-                        {isEditing ? 'Editing Mode...' : 'Securely rendered from memory.'}
+                        {isEditing ? 'Editing Mode - Changes will impact Hash' : 'Securely rendered from memory.'}
                       </div>
                       <div className="flex gap-2">
                         {/* Edit Controls */}
-                        {activeTab === 'transcript' && (
+                        {activeTab === 'transcript' && !viewingVersion && (
                           <>
                             {isEditing ? (
                               <>
@@ -1213,7 +1391,13 @@ export default function Dashboard() {
                                 </button>
                               </>
                             ) : (
-                              <button onClick={() => { setEditContent(transcript); setIsEditing(true); }} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600">
+                              <button onClick={() => {
+                                setEditContent(transcript);
+                                // Initialize Segment Editor if available
+                                if (segments.length > 0) setEditSegments(JSON.parse(JSON.stringify(segments)));
+                                else setEditSegments([]);
+                                setIsEditing(true);
+                              }} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600">
                                 Edit
                               </button>
                             )}
@@ -1226,7 +1410,16 @@ export default function Dashboard() {
 
                         <button
                           onClick={() => {
-                            const blob = new Blob([transcript], { type: 'text/plain;charset=utf-8' });
+                            // FORMATTED DOWNLOAD LOGIC (TXT)
+                            let text = transcript;
+                            if (segments.length > 0) {
+                              text = segments.map(s => {
+                                const t = new Date(s.start * 1000).toISOString().substr(14, 5);
+                                return `[${t}] ${s.speaker}: ${s.text}`;
+                              }).join('\n\n');
+                            }
+
+                            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
                             a.href = url;
@@ -1240,13 +1433,22 @@ export default function Dashboard() {
                         </button>
                         <button
                           onClick={() => {
+                            // FORMATTED DOWNLOAD LOGIC (PDF)
                             const doc = new jsPDF();
                             const pageHeight = doc.internal.pageSize.height;
                             const margin = 10;
                             const maxLineWidth = doc.internal.pageSize.width - margin * 2;
-                            const lineHeight = 7; // approximate line height
+                            const lineHeight = 7;
 
-                            const lines = doc.splitTextToSize(transcript, maxLineWidth);
+                            let text = transcript;
+                            if (segments.length > 0) {
+                              text = segments.map(s => {
+                                const t = new Date(s.start * 1000).toISOString().substr(14, 5);
+                                return `[${t}] ${s.speaker}: ${s.text}`;
+                              }).join('\n\n');
+                            }
+
+                            const lines = doc.splitTextToSize(text, maxLineWidth);
                             let cursorY = margin;
 
                             lines.forEach((line) => {
@@ -1279,27 +1481,44 @@ export default function Dashboard() {
                         <h4 className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Version History ({activeTab})</h4>
                         <div className="space-y-2">
                           {history.length === 0 ? <span className="text-xs text-slate-500">No history available type {activeTab}.</span> : null}
-                          {history.map((ver, idx) => (
-                            <div key={idx} className="flex justify-between items-center text-xs p-2 hover:bg-white/5 rounded border border-transparent hover:border-slate-700 transition-all">
-                              <div className="flex flex-col gap-1">
-                                <span className="text-slate-300 font-medium">Version {ver.version}</span>
-                                <span className="text-slate-500">{new Date(ver.edited_at || ver.date).toLocaleString()}</span>
+                          {history.map((ver, idx) => {
+                            // Compare using Version Number now, not Row ID
+                            const isViewing = viewingVersion === ver.version;
+                            const isLatest = idx === 0 && !viewingVersion;
+
+                            return (
+                              <div
+                                key={idx}
+                                onClick={() => {
+                                  if (idx === 0 && !viewingVersion) return; // Already on latest
+                                  if (idx === 0) {
+                                    // Clicked Latest while Viewing Old -> Switch to Latest
+                                    setViewingVersion(null);
+                                    // Fetch latest data to be sure
+                                    fetchData(meetingId);
+                                  } else {
+                                    // Clicked Old -> View Old
+                                    fetchRevisionContent(ver.version);
+                                  }
+                                }}
+                                className={`flex justify-between items-center text-xs p-2 rounded border transition-all cursor-pointer ${(isViewing || (idx === 0 && !viewingVersion)) ? 'bg-blue-900/40 border-blue-500/50 ring-1 ring-blue-500/30' :
+                                  'hover:bg-white/5 border-transparent hover:border-slate-700'
+                                  }`}
+                              >
+                                <div className="flex flex-col gap-1">
+                                  <span className={`font-medium ${(isViewing || (idx === 0 && !viewingVersion)) ? 'text-blue-200' : 'text-slate-300'}`}>
+                                    {idx === 0 ? 'Current Version' : `Version ${ver.version}`} {isViewing && '(Viewing)'}
+                                  </span>
+                                  <span className="text-slate-500">{new Date(ver.edited_at || ver.date).toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-mono bg-slate-800 text-slate-500 px-1 rounded truncate w-16" title={ver.content_hash}>
+                                    {ver.content_hash?.substring(0, 8)}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-mono bg-slate-800 text-slate-500 px-1 rounded truncate w-16" title={ver.content_hash}>
-                                  {ver.content_hash?.substring(0, 8)}
-                                </span>
-                                {activeTab === 'transcript' && idx !== 0 && ( /* Only allow revert for Transcript and not the very latest (which doesn't make sense usually, but logic allows any) */
-                                  <button
-                                    onClick={() => revertToVersion(ver.id)}
-                                    className="px-2 py-1 bg-blue-900/30 hover:bg-blue-900/50 text-blue-400 rounded text-[10px] border border-blue-800/50"
-                                  >
-                                    Revert
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     )}
@@ -1377,8 +1596,9 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-          )}
-        </main>
+          )
+          }
+        </main >
       </div >
     </div >
   );
