@@ -240,40 +240,35 @@ export default function Dashboard() {
     }
   };
 
-  const revertToVersion = async (targetVersion) => {
-    // Find the specific revision ID for this transcript version to satisfy backend API
-    const targetRev = history.find(h => h.version === targetVersion);
-    if (!targetRev) {
-      alert("Could not identify revision ID to restore.");
-      return;
-    }
+  const checkoutToVersion = async (targetVersion) => {
+    if (!window.confirm(`Are you sure you want to switch the active view to Version ${targetVersion}? This will NOT create a new version.`)) return;
 
-    if (!window.confirm(`Are you sure you want to restore Version ${targetVersion}? This will create a new Active version.`)) return;
     try {
-      addLog("Restoring version...");
+      addLog(`Switching to version ${targetVersion}...`);
       const token = await user.getIdToken();
-      const res = await fetch(`${API_BASE}/api/revert/${meetingId}`, {
+      const res = await fetch(`${API_BASE}/api/meeting/${meetingId}/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ revision_id: targetRev.id })
+        body: JSON.stringify({ version: targetVersion })
       });
 
       const data = await res.json();
       if (data.success) {
-        addLog(`Restored successfully. New version: ${data.new_version}`);
-        setViewingVersion(null); // Reset view mode since we are now on latest
+        addLog(`Switched to Version ${targetVersion}.`);
+        alert(`Successfully switched to Version ${targetVersion}.`);
+        setViewingVersion(null); // Clear viewing state as we are now "on" this version (it handles as latest/active)
         fetchData(meetingId);
         fetchHistory(meetingId);
       } else {
-        throw new Error(data.message || "Revert failed");
+        throw new Error(data.error);
       }
     } catch (e) {
-      console.error("Revert error:", e);
-      addLog(`Revert failed: ${e.message}`);
-      alert(e.message);
+      console.error("Checkout error:", e);
+      addLog(`Switch failed: ${e.message}`);
+      alert(`Switch failed: ${e.message}`);
     }
   };
 
@@ -1209,7 +1204,12 @@ export default function Dashboard() {
                                   <span>👁️ Viewing Version {viewingVersion}</span>
                                   <span className="text-[10px] bg-slate-700 px-2 rounded text-slate-400 uppercase tracking-widest">Snapshot</span>
                                 </span>
-
+                                <button
+                                  onClick={() => checkoutToVersion(viewingVersion)}
+                                  className="px-3 py-1 bg-green-900/50 hover:bg-green-600 text-green-200 hover:text-white rounded text-xs transition-colors border border-green-800"
+                                >
+                                  Switch to this Version
+                                </button>
                               </div>
                             )}
                             {segments.map((seg, i) => {
