@@ -1407,6 +1407,75 @@ export default function Dashboard() {
                         <button onClick={() => setShowHistory(!showHistory)} className={`px-3 py-1 rounded text-xs border ${showHistory ? 'bg-purple-900/50 border-purple-500 text-purple-200' : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600'}`}>
                           History
                         </button>
+
+                        {activeTab === 'transcript' && (
+                          <>
+                            <button
+                              onClick={() => {
+                                // FORMATTED DOWNLOAD LOGIC (TXT)
+                                let text = transcript;
+                                if (segments.length > 0) {
+                                  text = segments.map(s => {
+                                    const t = new Date(s.start * 1000).toISOString().substr(14, 5);
+                                    return `[${t}] ${s.speaker}: ${s.text}`;
+                                  }).join('\n\n');
+                                }
+
+                                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `transcript_${meetingId}.txt`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              }}
+                              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
+                            >
+                              TXT
+                            </button>
+                            <button
+                              onClick={() => {
+                                // FORMATTED DOWNLOAD LOGIC (PDF)
+                                const doc = new jsPDF();
+                                const pageHeight = doc.internal.pageSize.height;
+                                const margin = 10;
+                                const maxLineWidth = doc.internal.pageSize.width - margin * 2;
+                                const lineHeight = 7;
+
+                                let text = transcript;
+                                if (segments.length > 0) {
+                                  text = segments.map(s => {
+                                    const t = new Date(s.start * 1000).toISOString().substr(14, 5);
+                                    return `[${t}] ${s.speaker}: ${s.text}`;
+                                  }).join('\n\n');
+                                }
+
+                                const lines = doc.splitTextToSize(text, maxLineWidth);
+                                let cursorY = margin;
+
+                                lines.forEach((line) => {
+                                  if (cursorY + lineHeight > pageHeight - margin) {
+                                    doc.addPage();
+                                    cursorY = margin;
+                                  }
+                                  doc.text(line, margin, cursorY);
+                                  cursorY += lineHeight;
+                                });
+
+                                doc.save(`transcript_${meetingId}.pdf`);
+                              }}
+                              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
+                            >
+                              PDF
+                            </button>
+                            <button
+                              onClick={() => navigator.clipboard.writeText(transcript)}
+                              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-white border border-slate-600"
+                            >
+                              Copy
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
 
