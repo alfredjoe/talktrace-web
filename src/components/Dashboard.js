@@ -1025,28 +1025,31 @@ export default function Dashboard() {
           <div className="bg-slate-800/50 p-1 rounded-xl border border-slate-700 flex gap-1">
             <button
               onClick={() => {
-                // Fix: If we have an ID and are just switching views, don't reset.
-                // Reset only if we want to start a FRESH session from scratch.
-                // Logic: If already in 'new' and has ID -> Reset? 
-                // Or: If in library -> Switch to 'new'. 
-                // Let's make it: Click on ID = View Meeting. Click on "New Session" = Reset.
-                // But the button text changes. 
-                // So: If meetingId exists -> setView('new') (restore view). 
-                // To force new, user should use "Reset / New Meeting" button in main area or we add a specific "X" here?
-                // For now, simple view switch:
-                setView('new');
-                if (!meetingId) reset();
+                // If we are in Library view, "New Session" should RESET and go to new.
+                // If we are in Meeting view (view === 'new' && meetingId), the button says "Meeting ID".
+                // Clicking "Meeting ID" currently keeps us there. To start new, user goes Library -> New Session (as per user flow).
+                // Or we can allow clicking "Meeting ID" to do nothing (just a label).
+
+                if (view === 'library') {
+                  reset();
+                  setView('new');
+                } else if (!meetingId) {
+                  // Idle new view
+                  reset();
+                }
+                // If meetingId exists and view is 'new', we do nothing (it's a label).
               }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${view === 'new' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
             >
               <Mic className="w-4 h-4" />
-              {meetingId ? `Meeting ${meetingId.substr(0, 8)}...` : 'New Session'}
+              {/* Show ID only if active AND in meeting view. In library, show "New Session" to allow user to exit. */}
+              {meetingId && view === 'new' ? `Meeting ${meetingId.substr(0, 8)}...` : 'New Session'}
             </button>
             <button
               onClick={() => {
                 setView('library');
                 fetchMeetings();
-                // Sync URL
+                // Sync URL: This replaces query string with JUST view=library, effectively removing meeting_id.
                 const newUrl = `${window.location.pathname}?view=library`;
                 window.history.pushState({ path: newUrl }, '', newUrl);
               }}
@@ -1055,15 +1058,6 @@ export default function Dashboard() {
               <List className="w-4 h-4" />
               Previous Work
             </button>
-            {isHistorical && (
-              <button
-                onClick={reset}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 flex items-center gap-2 border-l border-slate-700 ml-2"
-              >
-                <LogOut className="w-4 h-4 rotate-180" />
-                Exit History
-              </button>
-            )}
           </div>
 
           <div className="flex items-center gap-4">
