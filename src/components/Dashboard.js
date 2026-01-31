@@ -1024,11 +1024,23 @@ export default function Dashboard() {
           {/* Top Navigation */}
           <div className="bg-slate-800/50 p-1 rounded-xl border border-slate-700 flex gap-1">
             <button
-              onClick={() => { setView('new'); reset(); }}
+              onClick={() => {
+                // Fix: If we have an ID and are just switching views, don't reset.
+                // Reset only if we want to start a FRESH session from scratch.
+                // Logic: If already in 'new' and has ID -> Reset? 
+                // Or: If in library -> Switch to 'new'. 
+                // Let's make it: Click on ID = View Meeting. Click on "New Session" = Reset.
+                // But the button text changes. 
+                // So: If meetingId exists -> setView('new') (restore view). 
+                // To force new, user should use "Reset / New Meeting" button in main area or we add a specific "X" here?
+                // For now, simple view switch:
+                setView('new');
+                if (!meetingId) reset();
+              }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${view === 'new' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
             >
               <Mic className="w-4 h-4" />
-              New Session
+              {meetingId ? `Meeting ${meetingId.substr(0, 8)}...` : 'New Session'}
             </button>
             <button
               onClick={() => {
