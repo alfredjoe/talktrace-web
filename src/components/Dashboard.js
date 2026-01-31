@@ -65,7 +65,28 @@ export default function Dashboard() {
         addLog('Session keys generated successfully.');
 
         // 1. Refresh Persistence: Fetch meetings immediately to restore state
-        fetchMeetings(keyPair.privateKey); // Pass key to allow immediate data fetching if needed, though mostly needed for fetchSecureAudio
+        const loadedMeetings = await fetchMeetings(keyPair.privateKey); // Pass key to allow immediate data fetching if needed
+
+        // 2. URL State Sync (Deep Linking)
+        const params = new URLSearchParams(window.location.search);
+        const urlMeetingId = params.get('meeting_id');
+        const urlView = params.get('view');
+
+        if (urlMeetingId) {
+          const target = loadedMeetings.find(m => m.meeting_id === urlMeetingId);
+          if (target) {
+            console.log("Restoring meeting from URL:", target.meeting_id);
+            // Pass the JUST generated private key explicitly, as state update is async
+            loadHistoricalMeeting(target, keyPair.privateKey);
+          } else {
+            console.warn("Meeting from URL not found in library (Unauthorized or Deleted).");
+            // Clean URL but stay on dashboard
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+        } else if (urlView === 'library') {
+          setView('library');
+        }
+
       } catch (err) {
         console.error('Key generation failed:', err);
         addLog(`Error generating keys: ${err.message}`);
@@ -115,9 +136,11 @@ export default function Dashboard() {
         // Auto-resume logic: Find most recent non-completed meeting?
         // Or just let user choose from library.
         // For now, if we are in 'idle' state, maybe show library or just load meetings.
+        return validMeetings;
       } else {
         console.warn("Fetch meetings failed, using empty list");
         setMeetings([]);
+        return [];
       }
     } catch (e) {
       console.error("Error fetching library:", e);
@@ -274,7 +297,8 @@ export default function Dashboard() {
 
 
 
-  const loadHistoricalMeeting = (meeting) => {
+  // Modified to accept explicit key for restoration sync
+  const loadHistoricalMeeting = (meeting, keyOverride = null) => {
     stopPolling(); // Ensure no background updates interfere
     setMeetingId(meeting.meeting_id);
     setView('new');
@@ -286,11 +310,20 @@ export default function Dashboard() {
     setSummary(null);
     setLogs([]); // Clear logs from previous session to avoid confusion
 
-    fetchSecureAudio(meeting.meeting_id);
-    fetchData(meeting.meeting_id);
-    fetchHistory(meeting.meeting_id);
+    // SYNC URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('meeting_id') !== meeting.meeting_id) {
+      const newUrl = `${window.location.pathname}?meeting_id=${meeting.meeting_id}`;
+      window.history.pushState({ path: newUrl }, '', newUrl);
+    }
+
+    const effectiveKey = keyOverride || privateKey;
+    fetchSecureAudio(meeting.meeting_id, effectiveKey);
+    fetchData(meeting.meeting_id, effectiveKey);
+    fetchHistory(meeting.meeting_id); // History check doesn't need private key (it lists verified types)
     setViewingVersion(null); // Ensure we start fresh
   };
+
 
   const regenerateSummary = async () => {
     try {
@@ -323,8 +356,9 @@ export default function Dashboard() {
     }
   };
 
-  const fetchData = async (id) => {
-    if (!privateKey) { alert("Session Key invalid"); return; }
+  const fetchData = async (id, keyOverride = null) => {
+    const activeKey = keyOverride || privateKey;
+    if (!activeKey) { alert("Session Key invalid"); return; }
     try {
       addLog("Fetching secure transcript...");
       const token = await user.getIdToken();
@@ -347,7 +381,7 @@ export default function Dashboard() {
       const encryptedKeyBytes = Uint8Array.from(atob(encryptedKeyB64), c => c.charCodeAt(0));
       const decryptedBuffer = await window.crypto.subtle.decrypt(
         { name: "RSA-OAEP" },
-        privateKey,
+        activeKey,
         encryptedKeyBytes
       );
       const decryptedView = new Uint8Array(decryptedBuffer);
@@ -669,8 +703,9 @@ export default function Dashboard() {
 
   // Phase 4: Secure Audio Retrieval (InMemory Blob for Playback)
   // Replaces direct downloadAndDecrypt for playback purposes
-  const fetchSecureAudio = async (id) => {
-    if (!privateKey) { alert('RSA Private Key not loaded.'); return; }
+  const fetchSecureAudio = async (id, keyOverride = null) => {
+    const activeKey = keyOverride || privateKey;
+    if (!activeKey) { alert('RSA Private Key not loaded.'); return; }
 
     try {
       addLog('Initiating secure audio stream (Phase 4)...');
@@ -693,7 +728,7 @@ export default function Dashboard() {
       const encryptedKeyBytes = Uint8Array.from(atob(encryptedKeyB64), c => c.charCodeAt(0));
       const decryptedBuffer = await window.crypto.subtle.decrypt(
         { name: "RSA-OAEP" },
-        privateKey,
+        activeKey,
         encryptedKeyBytes
       );
       const decryptedView = new Uint8Array(decryptedBuffer);
@@ -919,6 +954,9 @@ export default function Dashboard() {
     setSummary(null);
     setIsHistorical(false);
     stopPolling();
+
+    // Clear URL params
+    window.history.pushState({}, '', window.location.pathname);
   };
 
   // Render Helpers
@@ -993,7 +1031,13 @@ export default function Dashboard() {
               New Session
             </button>
             <button
-              onClick={() => { setView('library'); fetchMeetings(); }}
+              onClick={() => {
+                setView('library');
+                fetchMeetings();
+                // Sync URL
+                const newUrl = `${window.location.pathname}?view=library`;
+                window.history.pushState({ path: newUrl }, '', newUrl);
+              }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${view === 'library' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
             >
               <List className="w-4 h-4" />
