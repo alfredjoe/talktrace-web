@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Trash2 } from 'lucide-react';
+import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Trash2, Loader, Check } from 'lucide-react';
 import forge from 'node-forge';
 import { jsPDF } from "jspdf";
 import streamSaver from 'streamsaver';
@@ -30,6 +30,7 @@ export default function Dashboard() {
   const [privateKey, setPrivateKey] = useState(null);
   const [publicKeyPem, setPublicKeyPem] = useState(null);
   const pollingIntervalRef = useRef(null);
+  const logsEndRef = useRef(null);
 
   // New states for UI
   const [view, setView] = useState('new'); // 'new' or 'library'
@@ -99,6 +100,10 @@ export default function Dashboard() {
   }, []);
 
   // Removed Initialize Worker and Hardware Detection useEffect
+
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [logs]);
 
   const addLog = (message) => {
     setLogs((prevLogs) => [...prevLogs, message]);
@@ -638,6 +643,9 @@ export default function Dashboard() {
           } else if (data.process_state === 'transcribing') {
             setStatus('processing');
             setStatusMessage("Transcribing (Local AI)...");
+          } else if (data.process_state === 'summarizing') {
+            setStatus('processing');
+            setStatusMessage("Generating Summary...");
           } else {
             setStatus('processing');
             setStatusMessage("Meeting ended. Processing audio...");
@@ -1151,6 +1159,56 @@ export default function Dashboard() {
                 )}
               </div>
 
+              {/* STATUS STEPPER & PROGRESS UI */}
+              <div className="mb-8 px-4 py-8 bg-slate-900/30 border border-slate-700/50 rounded-xl relative overflow-hidden">
+                <div className="flex flex-col md:flex-row justify-between relative gap-8 md:gap-0 z-10">
+                  {/* Connection Line (Desktop) */}
+                  <div className="hidden md:block absolute top-[18px] left-8 right-8 h-0.5 bg-slate-800 -z-10" />
+
+                  {[
+                    { l: 'Joining Meet', s: status === 'joining' ? 'active' : (['active', 'processing', 'complete'].includes(status) ? 'done' : 'wait') },
+                    { l: 'Meeting Active', s: status === 'active' ? 'active' : (['processing', 'complete'].includes(status) ? 'done' : 'wait') },
+                    { l: 'Transcription', s: (status === 'processing' && !statusMessage.includes('Summary')) ? 'active' : (['complete'].includes(status) || (status === 'processing' && statusMessage.includes('Summary')) ? 'done' : 'wait') },
+                    { l: 'Summary Creation', s: (status === 'processing' && statusMessage.includes('Summary')) ? 'active' : (status === 'complete' ? 'done' : 'wait') },
+                    { l: 'Completed', s: status === 'complete' ? 'done' : 'wait' }
+                  ].map((step, i) => (
+                    <div key={i} className="flex md:flex-col items-center gap-4 md:gap-3 bg-slate-900/80 md:bg-transparent rounded-lg p-3 md:p-0 border border-slate-800 md:border-none backdrop-blur-md">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 z-10 transition-all duration-500 ${step.s === 'done' ? 'bg-green-500 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' :
+                        step.s === 'active' ? 'bg-slate-900 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]' :
+                          'bg-slate-900 border-slate-700'
+                        }`}>
+                        {step.s === 'done' ? <Check className="w-5 h-5 text-white" /> :
+                          step.s === 'active' ? <Loader className="w-4 h-4 text-blue-400 animate-spin" /> :
+                            <div className="w-2 h-2 rounded-full bg-slate-700" />
+                        }
+                      </div>
+                      <span className={`text-xs font-bold tracking-wide ${step.s === 'done' ? 'text-green-400' :
+                        step.s === 'active' ? 'text-blue-400' :
+                          'text-slate-600'
+                        }`}>{step.l}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Loading Bar - Post Process */}
+                {status === 'processing' && (
+                  <div className="mt-10 max-w-xl mx-auto animate-in fade-in slide-in-from-bottom-2">
+                    <div className="flex justify-between text-xs text-blue-300 mb-2 px-1">
+                      <span className="font-mono flex items-center gap-2">
+                        <Loader className="w-3 h-3 animate-spin" />
+                        {statusMessage}
+                      </span>
+                      <span className="font-mono">{statusMessage.includes('Summary') ? '80%' : '45%'}</span>
+                    </div>
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
+                      <div className={`h-full bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 bg-[length:200%_100%] animate-[shimmer_2s_linear_infinite] transition-all duration-1000 ease-out`}
+                        style={{ width: statusMessage.includes('Summary') ? '80%' : '45%' }}>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {status === 'complete' && !audioUrl && (
                 <div className="flex gap-4 mb-6">
                   <div className="text-slate-400 text-sm animate-pulse">Decrypting Audio Stream...</div>
@@ -1631,23 +1689,23 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Logs Console */}
-              <div className="bg-slate-950 rounded-xl p-4 font-mono text-xs text-slate-400 h-48 overflow-y-auto border border-slate-800">
-                {logs.map((log, i) => (
-                  <div key={i} className="mb-1 border-b border-white/5 pb-1 last:border-0 last:pb-0">
-                    <span className="text-slate-600 mr-2">&gt;</span>
-                    {log}
+              {/* System Event Log */}
+              <div className="mt-6 border-t border-slate-700/50 pt-4">
+                <details className="group open:bg-slate-900/40 open:p-4 open:rounded-xl transition-all">
+                  <summary className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-widest cursor-pointer hover:text-slate-300 select-none list-none mb-2">
+                    <span className="bg-slate-800 px-2 py-1 rounded text-[10px] border border-slate-700 group-hover:border-slate-500 transition-colors">Console Output</span>
+                    <span className="text-[10px] opacity-50">Debug stream</span>
+                  </summary>
+                  <div className="bg-slate-950 rounded-lg p-3 font-mono text-[10px] text-slate-400 h-32 overflow-y-auto border border-slate-800 shadow-inner">
+                    {logs.map((log, i) => (
+                      <div key={i} className="mb-1 border-b border-white/5 pb-1 last:border-0 last:pb-0">
+                        <span className="text-slate-600 mr-2">$</span>
+                        {log}
+                      </div>
+                    ))}
+                    <div ref={logsEndRef} />
                   </div>
-                ))}
-                {statusMessage && (
-                  <div className={`mt-2 animate-pulse font-semibold ${status === 'error' ? 'text-red-400' :
-                    status === 'complete' ? 'text-purple-400' :
-                      status === 'joining' ? 'text-yellow-400' :
-                        'text-blue-400'
-                    }`}>
-                    {statusMessage}
-                  </div>
-                )}
+                </details>
               </div>
             </div>
           )
