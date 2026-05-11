@@ -122,7 +122,11 @@ export default function Dashboard() {
     try {
       const token = await user.getIdToken();
       const response = await fetch(`${API_BASE}/api/meetings?user_id=${user.email}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Bypass-Tunnel-Reminder': 'true',
+          'ngrok-skip-browser-warning': 'true'
+        }
       });
       if (response.ok) {
         const data = await response.json();
