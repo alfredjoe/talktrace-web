@@ -23,7 +23,7 @@ export default function Dashboard() {
   const [viewingVersion, setViewingVersion] = useState(null); // ID of version being viewed (if not latest)
 
   const [statusMessage, setStatusMessage] = useState('');
-  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3002';
+  const API_BASE = (process.env.REACT_APP_API_URL || 'http://localhost:3002').replace(/\/+$/, '');
 
   // State for loaded key (replaces keyPairRef)
   // privateKey is now a WebCrypto CryptoKey object
