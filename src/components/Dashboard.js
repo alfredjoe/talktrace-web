@@ -23,7 +23,7 @@ export default function Dashboard() {
   const [viewingVersion, setViewingVersion] = useState(null); // ID of version being viewed (if not latest)
 
   const [statusMessage, setStatusMessage] = useState('');
-  const API_BASE = 'http://localhost:3002'; // Assuming this was missing and needs to be added
+  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3002';
 
   // State for loaded key (replaces keyPairRef)
   // privateKey is now a WebCrypto CryptoKey object
@@ -528,7 +528,7 @@ export default function Dashboard() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ hashes: candidates, meeting_id: meetingId })
+        body: JSON.stringify({ hashes: candidates, meeting_id: meetingId, content: text })
       });
 
       const result = await res.json();
