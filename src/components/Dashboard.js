@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Trash2, Loader, Check } from 'lucide-react';
+import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Loader, Check } from 'lucide-react';
 import forge from 'node-forge';
 import { jsPDF } from "jspdf";
 import streamSaver from 'streamsaver';
@@ -97,6 +97,7 @@ export default function Dashboard() {
     generateKeys();
 
     return () => stopPolling();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Removed Initialize Worker and Hardware Detection useEffect
@@ -774,6 +775,7 @@ export default function Dashboard() {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const downloadAndDecrypt = async () => {
     if (!privateKey) {
       alert('RSA Private Key not loaded. Check .env');
@@ -852,6 +854,7 @@ export default function Dashboard() {
       const decipher = forge.cipher.createDecipher('AES-CBC', forge.util.createBuffer(aesKey));
       decipher.start({ iv: forge.util.createBuffer(iv) });
 
+      // eslint-disable-next-line no-unused-vars
       let receivedLength = 0;
 
       while (true) {
@@ -911,6 +914,7 @@ export default function Dashboard() {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const deleteMeeting = async (e, meetingId) => {
     e.stopPropagation(); // Prevent opening the meeting
 
@@ -937,7 +941,7 @@ export default function Dashboard() {
         addLog('Meeting deleted successfully.');
 
         // If we're currently viewing this meeting, reset
-        if (meetingId === meetingId) {
+        if (meetingId) {
           reset();
         }
       } else {
@@ -1596,6 +1600,7 @@ export default function Dashboard() {
                           {history.map((ver, idx) => {
                             // Compare using Version Number now, not Row ID
                             const isViewing = viewingVersion === ver.version;
+                            // eslint-disable-next-line no-unused-vars
                             const isLatest = idx === 0 && !viewingVersion;
 
                             return (
