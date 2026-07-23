@@ -113,6 +113,54 @@
 .spotify-eq-bar-3 { animation: spotifyBar3 0.85s ease-in-out infinite; }
 .spotify-eq-bar-4 { animation: spotifyBar4 0.70s ease-in-out infinite; }
 
+/* Floating Glow Orbs Keyframes */
+@keyframes floatOrb1 {
+  0% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(40px, -45px) scale(1.18); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+@keyframes floatOrb2 {
+  0% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(-45px, 40px) scale(1.22); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.animate-orb-1 { animation: floatOrb1 12s ease-in-out infinite; }
+.animate-orb-2 { animation: floatOrb2 16s ease-in-out infinite; }
+
+/* Glowing Pulse Ring Utility */
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 rgba(30, 215, 96, 0.7); }
+  70% { box-shadow: 0 0 0 16px rgba(30, 215, 96, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(30, 215, 96, 0); }
+}
+
+.glow-pulse-ring { animation: pulseGlow 2.2s infinite; }
+
+/* Card Shine Sweep Animation */
+@keyframes shineSweep {
+  0% { transform: translateX(-150%) rotate(25deg); }
+  100% { transform: translateX(250%) rotate(25deg); }
+}
+
+.shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-effect::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(to right, transparent 0%, rgba(255, 255, 255, 0.12) 50%, transparent 100%);
+  transform: rotate(25deg);
+  animation: shineSweep 5s ease-in-out infinite;
+}
+
 /* Custom Spotify Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

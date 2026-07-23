@@ -1216,20 +1216,27 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-sleek-mesh relative p-6 md:p-8 text-white font-sans overflow-hidden">
-      <div className="max-w-4xl mx-auto relative z-10">
-        <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 sleek-card p-6 rounded-2xl border border-slate-700/60 shadow-xl backdrop-blur-xl">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gradient-sleek tracking-tight">
-              TalkTrace
-            </h1>
-            <p className="text-slate-400 text-xs font-medium mt-0.5 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Secure Meeting Intelligence
-            </p>
+      {/* Ambient Floating Glow Orbs */}
+      <div className="fixed top-10 left-10 w-[480px] h-[480px] bg-[#1DB954]/15 rounded-full blur-[140px] pointer-events-none animate-orb-1 -z-10" />
+      <div className="fixed bottom-10 right-10 w-[520px] h-[520px] bg-[#1ED760]/10 rounded-full blur-[160px] pointer-events-none animate-orb-2 -z-10" />
+
+      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
+        {/* Top Header */}
+        <header className="flex justify-between items-center bg-[#181818]/90 border border-white/5 p-4 rounded-2xl backdrop-blur-md shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1DB954] to-[#121212] border border-[#1DB954]/40 flex items-center justify-center shadow-lg shadow-[#1DB954]/20">
+              <Mic className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                Talktrace <span className="px-2 py-0.5 bg-[#1DB954]/20 border border-[#1DB954]/40 text-[#1ED760] rounded-full text-[10px] uppercase font-bold tracking-wider">AI LIVE</span>
+              </h1>
+              <p className="text-xs text-[#B3B3B3]">Secure Real-Time Meeting Intelligence</p>
+            </div>
           </div>
 
           {/* Top Navigation */}
-          <div className="bg-slate-900/80 p-1 rounded-xl border border-slate-800 flex gap-1">
+          <div className="bg-[#121212] p-1 rounded-xl border border-white/5 flex gap-1">
             <button
               onClick={() => {
                 if (view === 'library') {
@@ -1239,7 +1246,7 @@ export default function Dashboard() {
                   reset();
                 }
               }}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${view === 'new' ? 'btn-sleek-primary text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${view === 'new' ? 'btn-sleek-primary text-black shadow-md' : 'text-[#B3B3B3] hover:text-white hover:bg-white/5'}`}
             >
               <Mic className="w-4 h-4" />
               {meetingId && view === 'new' ? `Meeting ${meetingId.substr(0, 8)}...` : 'New Session'}
@@ -1251,7 +1258,7 @@ export default function Dashboard() {
                 const newUrl = `${window.location.pathname}?view=library`;
                 window.history.pushState({ path: newUrl }, '', newUrl);
               }}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${view === 'library' ? 'btn-sleek-primary text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${view === 'library' ? 'btn-sleek-primary text-black shadow-md' : 'text-[#B3B3B3] hover:text-white hover:bg-white/5'}`}
             >
               <List className="w-4 h-4" />
               Previous Work
@@ -1260,11 +1267,11 @@ export default function Dashboard() {
 
           <div className="flex items-center gap-4">
             <div className="text-right hidden md:block">
-              <p className="text-sm font-medium">{user?.email}</p>
-              <p className="text-xs text-slate-500">Authenticated</p>
+              <p className="text-sm font-semibold text-white">{user?.email}</p>
+              <p className="text-xs text-[#1DB954] font-medium">● Authenticated</p>
             </div>
             <button onClick={logout} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-              <LogOut className="w-5 h-5 text-slate-400" />
+              <LogOut className="w-5 h-5 text-[#B3B3B3]" />
             </button>
           </div>
         </header>
@@ -1274,13 +1281,25 @@ export default function Dashboard() {
             <>
               {/* Connection Card */}
               {!meetingId && (
-                <div className="sleek-card p-8 border border-slate-700/60 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <h2 className="text-xl font-bold mb-6 flex items-center gap-3 text-white">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                      <Mic className="w-5 h-5 text-blue-400" />
+                <div className="sleek-card p-8 border border-[#1DB954]/30 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 shine-effect">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <h2 className="text-xl font-black flex items-center gap-3 text-white">
+                      <div className="w-10 h-10 rounded-xl bg-[#1DB954]/10 border border-[#1DB954]/30 flex items-center justify-center shadow-lg shadow-[#1DB954]/10">
+                        <Mic className="w-5 h-5 text-[#1ED760]" />
+                      </div>
+                      Deploy Assistant Bot
+                    </h2>
+
+                    {/* Animated Live Feature Badges */}
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-3 py-1 bg-[#1DB954]/10 border border-[#1DB954]/30 text-[#1ED760] rounded-full text-[11px] font-semibold flex items-center gap-1.5 shadow-sm">
+                        <span>⚡ 100% Encrypted Vault</span>
+                      </span>
+                      <span className="px-3 py-1 bg-white/5 border border-white/10 text-[#B3B3B3] rounded-full text-[11px] font-semibold flex items-center gap-1.5">
+                        <span>🎙️ Speaker Diarization</span>
+                      </span>
                     </div>
-                    Deploy Assistant Bot
-                  </h2>
+                  </div>
                   <div className="space-y-6">
                     {/* Language Selector Dropdown */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 backdrop-blur-md">
