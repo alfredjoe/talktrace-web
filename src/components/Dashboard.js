@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Check, Search, X, Trash2, History } from 'lucide-react';
+import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Check, Search, X, Trash2, History, Square } from 'lucide-react';
 import forge from 'node-forge';
 import { jsPDF } from "jspdf";
 import streamSaver from 'streamsaver';
@@ -1348,50 +1348,102 @@ export default function Dashboard() {
             </>
           )}
 
-
-          {/* Status & Actions Card (Only show if we have a status/meetingId and view is NOT library) */}
-          {/* Note: In 'library' view we renderLibrary called above. In 'new', we show this block if meetingId exists */}
-          {/* Actually, my logic above hides Connection Card if meetingId exists. So here we show the rest. */}
-          {/* We must wrap this to only show if view !== 'library' */}
-
           {view !== 'library' && (status !== 'idle' || logs.length > 0) && (
-            <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-8 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex justify-between items-center mb-6">
+            <div className="bg-[#181818] border border-[#1DB954]/30 rounded-2xl p-6 md:p-8 backdrop-blur-md shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
+              {/* Top Bar: Now Playing Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-white/10">
                 <div className="flex items-center gap-4">
-                  <h3 className="text-xl font-semibold">Session Status</h3>
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${status === 'joining' ? 'bg-yellow-500/10 text-yellow-400' :
-                    status === 'active' ? 'bg-green-500/10 text-green-400' :
-                      status === 'processing' ? 'bg-blue-500/10 text-blue-400' :
-                        status === 'complete' ? 'bg-purple-500/10 text-purple-400' :
-                          'bg-slate-700 text-slate-400'
-                    }`}>
-                    {status}
+                  {/* Spotify Album Art Box with Equalizer */}
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#1DB954] to-[#121212] flex items-center justify-center shadow-lg shadow-[#1DB954]/20 border border-[#1DB954]/40 relative group overflow-hidden">
+                    {status === 'active' || status === 'processing' ? (
+                      <div className="flex items-end gap-1 h-6">
+                        <div className="w-1 bg-[#1DB954] rounded-full spotify-eq-bar-1" />
+                        <div className="w-1 bg-[#1ED760] rounded-full spotify-eq-bar-2" />
+                        <div className="w-1 bg-[#1DB954] rounded-full spotify-eq-bar-3" />
+                        <div className="w-1 bg-[#A6F4C5] rounded-full spotify-eq-bar-4" />
+                      </div>
+                    ) : (
+                      <Mic className="w-7 h-7 text-white" />
+                    )}
                   </div>
-                  {detectedLanguage && (
-                    <div className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded-full text-xs font-mono font-medium flex items-center gap-1.5">
-                      <span>🌐 {detectedLanguage.toUpperCase()}</span>
+
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1DB954]">NOW RECORDING • LIVE SESSION</span>
+                      {detectedLanguage && (
+                        <span className="px-2 py-0.5 bg-[#1DB954]/10 border border-[#1DB954]/40 text-[#1ED760] rounded-full text-[10px] font-mono font-semibold">
+                          🌐 {detectedLanguage.toUpperCase()}
+                        </span>
+                      )}
                     </div>
-                  )}
+                    <h3 className="text-lg font-extrabold text-white tracking-tight">Talktrace AI Meeting Track</h3>
+                    <p className="text-xs text-[#B3B3B3] font-medium">{statusMessage || 'Session active...'}</p>
+                  </div>
                 </div>
 
-                {status === 'active' && (
-                  <button
-                    onClick={stopRecording}
-                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
-                  >
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                    Stop Recording
-                  </button>
-                )}
+                {/* Spotify Player Badges & Actions */}
+                <div className="flex items-center gap-3">
+                  <div className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-md ${
+                    status === 'joining' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
+                    status === 'active' ? 'bg-[#1DB954]/20 text-[#1ED760] border border-[#1DB954]/50 shadow-[#1DB954]/20' :
+                    status === 'processing' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' :
+                    status === 'complete' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
+                    'bg-zinc-800 text-zinc-400'
+                  }`}>
+                    {status === 'active' ? '● LIVE STREAMING' : status.toUpperCase()}
+                  </div>
+
+                  {status === 'active' && (
+                    <button
+                      onClick={stopRecording}
+                      className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/50 rounded-full text-xs font-bold transition-all flex items-center gap-2 shadow-lg"
+                    >
+                      <Square className="w-3.5 h-3.5 fill-current" />
+                      Stop Recording
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Spotify Player Control Bar (Progress Line + Player Controls) */}
+              <div className="bg-[#121212]/90 border border-white/5 rounded-xl p-4 mb-6">
+                <div className="flex items-center justify-between gap-4 mb-2">
+                  <span className="text-[11px] font-mono text-[#B3B3B3]">
+                    {status === 'complete' ? 'COMPLETE' : status === 'processing' ? '03:45' : 'LIVE'}
+                  </span>
+                  
+                  {/* Fake Audio Soundwave Visualizer Bar */}
+                  <div className="flex-1 h-1.5 bg-[#282828] rounded-full overflow-hidden relative">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[#1DB954] to-[#1ED760] transition-all duration-700 rounded-full shadow-[0_0_12px_#1DB954]"
+                      style={{ width: status === 'joining' ? '20%' : status === 'active' ? '50%' : status === 'processing' ? '80%' : status === 'complete' ? '100%' : '5%' }}
+                    />
+                  </div>
+
+                  <span className="text-[11px] font-mono text-[#B3B3B3]">
+                    {status === 'complete' ? '100%' : 'REC'}
+                  </span>
+                </div>
+
+                {/* Spotify Controls (Visual Only) */}
+                <div className="flex items-center justify-center gap-6 pt-1 text-[#B3B3B3]">
+                  <span className="text-xs hover:text-white cursor-pointer transition-colors">🔀</span>
+                  <span className="text-xs hover:text-white cursor-pointer transition-colors">⏮</span>
+                  <div className="w-8 h-8 rounded-full bg-[#1DB954] text-black flex items-center justify-center font-bold text-xs shadow-md shadow-[#1DB954]/40 cursor-pointer hover:scale-105 transition-transform">
+                    {status === 'active' ? '⏸' : '▶'}
+                  </div>
+                  <span className="text-xs hover:text-white cursor-pointer transition-colors">⏭</span>
+                  <span className="text-xs hover:text-[#1DB954] cursor-pointer transition-colors">🔁</span>
+                </div>
               </div>
 
               {/* STATUS STEPPER & PROGRESS UI */}
-              <div className="mb-8 px-4 py-8 bg-slate-900/30 border border-slate-700/50 rounded-xl relative overflow-hidden">
-                <div className="flex flex-col md:flex-row justify-between relative gap-8 md:gap-0 z-10">
+              <div className="mb-6 px-4 py-6 bg-[#121212]/60 border border-white/5 rounded-xl relative overflow-hidden">
+                <div className="flex flex-col md:flex-row justify-between relative gap-6 md:gap-0 z-10">
                   {/* Connection Line (Desktop) */}
-                  <div className="hidden md:block absolute top-[18px] left-8 right-8 h-1 bg-slate-800 -z-10 rounded-full overflow-hidden">
+                  <div className="hidden md:block absolute top-[18px] left-8 right-8 h-1 bg-[#282828] -z-10 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-700"
+                      className="h-full bg-gradient-to-r from-[#1DB954] to-[#1ED760] transition-all duration-700"
                       style={{ width: status === 'joining' ? '20%' : status === 'active' ? '45%' : status === 'processing' ? (statusMessage.includes('Summary') ? '80%' : '65%') : status === 'complete' ? '100%' : '0%' }}
                     />
                   </div>
@@ -1403,19 +1455,19 @@ export default function Dashboard() {
                     { l: 'Summary Creation', s: (status === 'processing' && statusMessage.includes('Summary')) ? 'active' : (status === 'complete' ? 'done' : 'wait') },
                     { l: 'Completed', s: status === 'complete' ? 'done' : 'wait' }
                   ].map((step, i) => (
-                    <div key={i} className="flex md:flex-col items-center gap-4 md:gap-3 bg-slate-900/80 md:bg-transparent rounded-lg p-3 md:p-0 border border-slate-800 md:border-none backdrop-blur-md">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 z-10 transition-all duration-500 ${step.s === 'done' ? 'bg-green-500 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' :
-                        step.s === 'active' ? 'bg-slate-900 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)] animate-pulse' :
-                          'bg-slate-900 border-slate-700'
+                    <div key={i} className="flex md:flex-col items-center gap-4 md:gap-3 bg-[#181818] md:bg-transparent rounded-lg p-3 md:p-0 border border-white/5 md:border-none backdrop-blur-md">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 z-10 transition-all duration-500 ${step.s === 'done' ? 'bg-[#1DB954] border-[#1DB954] shadow-[0_0_12px_rgba(30,215,96,0.5)]' :
+                        step.s === 'active' ? 'bg-[#121212] border-[#1ED760] shadow-[0_0_15px_rgba(30,215,96,0.7)] animate-pulse' :
+                          'bg-[#121212] border-[#282828]'
                         }`}>
-                        {step.s === 'done' ? <Check className="w-5 h-5 text-white" /> :
-                          step.s === 'active' ? <div className="w-3 h-3 rounded-full bg-blue-400 animate-ping" /> :
-                            <div className="w-2 h-2 rounded-full bg-slate-700" />
+                        {step.s === 'done' ? <Check className="w-5 h-5 text-black font-extrabold" /> :
+                          step.s === 'active' ? <div className="w-3 h-3 rounded-full bg-[#1ED760] animate-ping" /> :
+                            <div className="w-2 h-2 rounded-full bg-[#282828]" />
                         }
                       </div>
-                      <span className={`text-xs font-bold tracking-wide ${step.s === 'done' ? 'text-green-400' :
-                        step.s === 'active' ? 'text-blue-400' :
-                          'text-slate-600'
+                      <span className={`text-xs font-bold tracking-wide ${step.s === 'done' ? 'text-[#1ED760]' :
+                        step.s === 'active' ? 'text-[#1DB954]' :
+                          'text-zinc-500'
                         }`}>{step.l}</span>
                     </div>
                   ))}
