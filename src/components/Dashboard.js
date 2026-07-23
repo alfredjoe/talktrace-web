@@ -1217,26 +1217,26 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-sleek-mesh relative p-6 md:p-8 text-white font-sans overflow-hidden">
       {/* Ambient Floating Glow Orbs */}
-      <div className="fixed top-10 left-10 w-[480px] h-[480px] bg-[#1DB954]/15 rounded-full blur-[140px] pointer-events-none animate-orb-1 -z-10" />
-      <div className="fixed bottom-10 right-10 w-[520px] h-[520px] bg-[#1ED760]/10 rounded-full blur-[160px] pointer-events-none animate-orb-2 -z-10" />
+      <div className="fixed top-10 left-10 w-[480px] h-[480px] bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none animate-orb-1 -z-10" />
+      <div className="fixed bottom-10 right-10 w-[520px] h-[520px] bg-cyan-500/10 rounded-full blur-[160px] pointer-events-none animate-orb-2 -z-10" />
 
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
         {/* Top Header */}
-        <header className="flex justify-between items-center bg-[#181818]/90 border border-white/5 p-4 rounded-2xl backdrop-blur-md shadow-xl">
+        <header className="flex justify-between items-center bg-slate-900/80 border border-slate-800 p-4 rounded-2xl backdrop-blur-md shadow-xl">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1DB954] to-[#121212] border border-[#1DB954]/40 flex items-center justify-center shadow-lg shadow-[#1DB954]/20">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 border border-blue-500/30 flex items-center justify-center shadow-lg shadow-blue-500/20">
               <Mic className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-                Talktrace <span className="px-2 py-0.5 bg-[#1DB954]/20 border border-[#1DB954]/40 text-[#1ED760] rounded-full text-[10px] uppercase font-bold tracking-wider">AI LIVE</span>
+                Talktrace <span className="px-2 py-0.5 bg-blue-500/20 border border-blue-500/40 text-blue-400 rounded-full text-[10px] uppercase font-bold tracking-wider">AI LIVE</span>
               </h1>
-              <p className="text-xs text-[#B3B3B3]">Secure Real-Time Meeting Intelligence</p>
+              <p className="text-xs text-slate-400">Secure Real-Time Meeting Intelligence</p>
             </div>
           </div>
 
           {/* Top Navigation */}
-          <div className="bg-[#121212] p-1 rounded-xl border border-white/5 flex gap-1">
+          <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex gap-1">
             <button
               onClick={() => {
                 if (view === 'library') {
@@ -1246,7 +1246,7 @@ export default function Dashboard() {
                   reset();
                 }
               }}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${view === 'new' ? 'btn-sleek-primary text-black shadow-md' : 'text-[#B3B3B3] hover:text-white hover:bg-white/5'}`}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${view === 'new' ? 'btn-sleek-primary text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
             >
               <Mic className="w-4 h-4" />
               {meetingId && view === 'new' ? `Meeting ${meetingId.substr(0, 8)}...` : 'New Session'}
@@ -1258,7 +1258,7 @@ export default function Dashboard() {
                 const newUrl = `${window.location.pathname}?view=library`;
                 window.history.pushState({ path: newUrl }, '', newUrl);
               }}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${view === 'library' ? 'btn-sleek-primary text-black shadow-md' : 'text-[#B3B3B3] hover:text-white hover:bg-white/5'}`}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${view === 'library' ? 'btn-sleek-primary text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
             >
               <List className="w-4 h-4" />
               Previous Work
@@ -1268,10 +1268,10 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <div className="text-right hidden md:block">
               <p className="text-sm font-semibold text-white">{user?.email}</p>
-              <p className="text-xs text-[#1DB954] font-medium">● Authenticated</p>
+              <p className="text-xs text-emerald-400 font-medium">● Authenticated</p>
             </div>
             <button onClick={logout} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-              <LogOut className="w-5 h-5 text-[#B3B3B3]" />
+              <LogOut className="w-5 h-5 text-slate-400" />
             </button>
           </div>
         </header>
@@ -1281,21 +1281,21 @@ export default function Dashboard() {
             <>
               {/* Connection Card */}
               {!meetingId && (
-                <div className="sleek-card p-8 border border-[#1DB954]/30 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 shine-effect">
+                <div className="sleek-card p-8 border border-slate-700/60 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 shine-effect">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                     <h2 className="text-xl font-black flex items-center gap-3 text-white">
-                      <div className="w-10 h-10 rounded-xl bg-[#1DB954]/10 border border-[#1DB954]/30 flex items-center justify-center shadow-lg shadow-[#1DB954]/10">
-                        <Mic className="w-5 h-5 text-[#1ED760]" />
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shadow-lg shadow-blue-500/10">
+                        <Mic className="w-5 h-5 text-blue-400" />
                       </div>
                       Deploy Assistant Bot
                     </h2>
 
                     {/* Animated Live Feature Badges */}
                     <div className="flex flex-wrap gap-2">
-                      <span className="px-3 py-1 bg-[#1DB954]/10 border border-[#1DB954]/30 text-[#1ED760] rounded-full text-[11px] font-semibold flex items-center gap-1.5 shadow-sm">
+                      <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-full text-[11px] font-semibold flex items-center gap-1.5 shadow-sm">
                         <span>⚡ 100% Encrypted Vault</span>
                       </span>
-                      <span className="px-3 py-1 bg-white/5 border border-white/10 text-[#B3B3B3] rounded-full text-[11px] font-semibold flex items-center gap-1.5">
+                      <span className="px-3 py-1 bg-white/5 border border-white/10 text-slate-400 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
                         <span>🎙️ Speaker Diarization</span>
                       </span>
                     </div>
@@ -1348,7 +1348,7 @@ export default function Dashboard() {
                         <button
                           onClick={joinMeeting}
                           disabled={!meetingLink.trim()}
-                          className="flex-1 btn-sleek-primary disabled:opacity-40 text-white font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg text-sm"
+                          className="flex-1 btn-sleek-primary disabled:opacity-40 text-white font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg text-sm glow-pulse-ring"
                         >
                           Deploy Bot to Meeting
                         </button>
@@ -1368,101 +1368,57 @@ export default function Dashboard() {
           )}
 
           {view !== 'library' && (status !== 'idle' || logs.length > 0) && (
-            <div className="bg-[#181818] border border-[#1DB954]/30 rounded-2xl p-6 md:p-8 backdrop-blur-md shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
-              {/* Top Bar: Now Playing Header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-white/10">
+            <div className="sleek-card border border-slate-700/60 rounded-2xl p-6 md:p-8 backdrop-blur-md shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
+              {/* Header Status Bar */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-slate-800">
                 <div className="flex items-center gap-4">
-                  {/* Spotify Album Art Box with Equalizer */}
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#1DB954] to-[#121212] flex items-center justify-center shadow-lg shadow-[#1DB954]/20 border border-[#1DB954]/40 relative group overflow-hidden">
-                    {status === 'active' || status === 'processing' ? (
-                      <div className="flex items-end gap-1 h-6">
-                        <div className="w-1 bg-[#1DB954] rounded-full spotify-eq-bar-1" />
-                        <div className="w-1 bg-[#1ED760] rounded-full spotify-eq-bar-2" />
-                        <div className="w-1 bg-[#1DB954] rounded-full spotify-eq-bar-3" />
-                        <div className="w-1 bg-[#A6F4C5] rounded-full spotify-eq-bar-4" />
-                      </div>
-                    ) : (
-                      <Mic className="w-7 h-7 text-white" />
-                    )}
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-500/30">
+                    <Mic className="w-6 h-6 text-white" />
                   </div>
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#1DB954]">NOW RECORDING • LIVE SESSION</span>
+                      <h3 className="text-lg font-extrabold text-white tracking-tight">Session Status</h3>
                       {detectedLanguage && (
-                        <span className="px-2 py-0.5 bg-[#1DB954]/10 border border-[#1DB954]/40 text-[#1ED760] rounded-full text-[10px] font-mono font-semibold">
+                        <span className="px-2.5 py-0.5 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 rounded-full text-[10px] font-mono font-semibold">
                           🌐 {detectedLanguage.toUpperCase()}
                         </span>
                       )}
                     </div>
-                    <h3 className="text-lg font-extrabold text-white tracking-tight">Talktrace AI Meeting Track</h3>
-                    <p className="text-xs text-[#B3B3B3] font-medium">{statusMessage || 'Session active...'}</p>
+                    <p className="text-xs text-slate-400 font-medium">{statusMessage || 'Session active...'}</p>
                   </div>
                 </div>
 
-                {/* Spotify Player Badges & Actions */}
                 <div className="flex items-center gap-3">
                   <div className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-md ${
-                    status === 'joining' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
-                    status === 'active' ? 'bg-[#1DB954]/20 text-[#1ED760] border border-[#1DB954]/50 shadow-[#1DB954]/20' :
-                    status === 'processing' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' :
-                    status === 'complete' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
-                    'bg-zinc-800 text-zinc-400'
+                    status === 'joining' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' :
+                    status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-emerald-500/10' :
+                    status === 'processing' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30' :
+                    status === 'complete' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30' :
+                    'bg-slate-800 text-slate-400'
                   }`}>
-                    {status === 'active' ? '● LIVE STREAMING' : status.toUpperCase()}
+                    {status}
                   </div>
 
                   {status === 'active' && (
                     <button
                       onClick={stopRecording}
-                      className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/50 rounded-full text-xs font-bold transition-all flex items-center gap-2 shadow-lg"
+                      className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg"
                     >
-                      <Square className="w-3.5 h-3.5 fill-current" />
+                      <Square className="w-3.5 h-3.5 fill-current text-red-400" />
                       Stop Recording
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Spotify Player Control Bar (Progress Line + Player Controls) */}
-              <div className="bg-[#121212]/90 border border-white/5 rounded-xl p-4 mb-6">
-                <div className="flex items-center justify-between gap-4 mb-2">
-                  <span className="text-[11px] font-mono text-[#B3B3B3]">
-                    {status === 'complete' ? 'COMPLETE' : status === 'processing' ? '03:45' : 'LIVE'}
-                  </span>
-                  
-                  {/* Fake Audio Soundwave Visualizer Bar */}
-                  <div className="flex-1 h-1.5 bg-[#282828] rounded-full overflow-hidden relative">
-                    <div 
-                      className="h-full bg-gradient-to-r from-[#1DB954] to-[#1ED760] transition-all duration-700 rounded-full shadow-[0_0_12px_#1DB954]"
-                      style={{ width: status === 'joining' ? '20%' : status === 'active' ? '50%' : status === 'processing' ? '80%' : status === 'complete' ? '100%' : '5%' }}
-                    />
-                  </div>
-
-                  <span className="text-[11px] font-mono text-[#B3B3B3]">
-                    {status === 'complete' ? '100%' : 'REC'}
-                  </span>
-                </div>
-
-                {/* Spotify Controls (Visual Only) */}
-                <div className="flex items-center justify-center gap-6 pt-1 text-[#B3B3B3]">
-                  <span className="text-xs hover:text-white cursor-pointer transition-colors">🔀</span>
-                  <span className="text-xs hover:text-white cursor-pointer transition-colors">⏮</span>
-                  <div className="w-8 h-8 rounded-full bg-[#1DB954] text-black flex items-center justify-center font-bold text-xs shadow-md shadow-[#1DB954]/40 cursor-pointer hover:scale-105 transition-transform">
-                    {status === 'active' ? '⏸' : '▶'}
-                  </div>
-                  <span className="text-xs hover:text-white cursor-pointer transition-colors">⏭</span>
-                  <span className="text-xs hover:text-[#1DB954] cursor-pointer transition-colors">🔁</span>
-                </div>
-              </div>
-
               {/* STATUS STEPPER & PROGRESS UI */}
-              <div className="mb-6 px-4 py-6 bg-[#121212]/60 border border-white/5 rounded-xl relative overflow-hidden">
+              <div className="mb-6 px-4 py-6 bg-slate-900/60 border border-slate-800 rounded-xl relative overflow-hidden">
                 <div className="flex flex-col md:flex-row justify-between relative gap-6 md:gap-0 z-10">
                   {/* Connection Line (Desktop) */}
-                  <div className="hidden md:block absolute top-[18px] left-8 right-8 h-1 bg-[#282828] -z-10 rounded-full overflow-hidden">
+                  <div className="hidden md:block absolute top-[18px] left-8 right-8 h-1 bg-slate-800 -z-10 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-[#1DB954] to-[#1ED760] transition-all duration-700"
+                      className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-700"
                       style={{ width: status === 'joining' ? '20%' : status === 'active' ? '45%' : status === 'processing' ? (statusMessage.includes('Summary') ? '80%' : '65%') : status === 'complete' ? '100%' : '0%' }}
                     />
                   </div>
