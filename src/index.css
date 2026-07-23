@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,23 +7,28 @@
 @layer base {
   body {
     margin: 0;
-    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
-    background-color: #080c14;
-    color: #f1f5f9;
+    background-color: #0A0203;
+    color: #F8FAFC;
     overflow-x: hidden;
+  }
+  
+  h1, h2, h3, .brand-font {
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
   }
 }
 
-/* Subtle Animated Ambient Background */
+/* Signature Deep Crimson Mesh Background */
 .bg-sleek-mesh {
-  background-color: #080c14;
+  background-color: #0A0203;
   background-image: 
-    radial-gradient(at 10% 10%, rgba(99, 102, 241, 0.15) 0px, transparent 45%),
-    radial-gradient(at 90% 10%, rgba(56, 189, 248, 0.12) 0px, transparent 45%),
-    radial-gradient(at 50% 90%, rgba(168, 85, 247, 0.10) 0px, transparent 50%);
-  background-size: 140% 140%;
-  animation: sleekMesh 16s ease infinite alternate;
+    radial-gradient(at 15% 15%, rgba(228, 30, 43, 0.22) 0px, transparent 48%),
+    radial-gradient(at 85% 15%, rgba(180, 10, 20, 0.18) 0px, transparent 45%),
+    radial-gradient(at 50% 85%, rgba(255, 60, 60, 0.14) 0px, transparent 50%),
+    radial-gradient(at 80% 80%, rgba(120, 5, 12, 0.25) 0px, transparent 45%);
+  background-size: 150% 150%;
+  animation: sleekMesh 18s ease infinite alternate;
 }
 
 @keyframes sleekMesh {
@@ -30,71 +37,71 @@
   100% { background-position: 0% 100%; }
 }
 
-/* Sleek Glassmorphic Container */
+/* Glassmorphic Crimson Cards */
 .sleek-card {
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+  background: rgba(22, 5, 8, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(228, 30, 43, 0.22);
+  box-shadow: 0 20px 45px -15px rgba(228, 30, 43, 0.20), 0 0 20px 0 rgba(0, 0, 0, 0.8);
   border-radius: 1.25rem;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sleek-card-hover {
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+  background: rgba(22, 5, 8, 0.70);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(228, 30, 43, 0.22);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.7);
   border-radius: 1.25rem;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sleek-card-hover:hover {
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: rgba(228, 30, 43, 0.55);
   transform: translateY(-2px);
-  box-shadow: 0 15px 35px -5px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 15px 35px -5px rgba(228, 30, 43, 0.35);
 }
 
-/* Sleek Animated Gradient Text */
+/* Signature Crimson Gradient Text */
 .text-gradient-sleek {
-  background: linear-gradient(135deg, #60a5fa 0%, #818cf8 50%, #c084fc 100%);
+  background: linear-gradient(135deg, #FF4D5A 0%, #E41E2B 50%, #FFB0B5 100%);
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
 }
 
-/* Primary Sleek Button */
+/* Primary Crimson Button */
 .btn-sleek-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-  box-shadow: 0 4px 20px -2px rgba(59, 130, 246, 0.35);
+  background: linear-gradient(135deg, #E41E2B 0%, #C4121F 100%);
+  box-shadow: 0 4px 25px -2px rgba(228, 30, 43, 0.55);
   transition: all 0.25s ease;
 }
 
 .btn-sleek-primary:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-  box-shadow: 0 8px 25px -2px rgba(99, 102, 241, 0.5);
+  background: linear-gradient(135deg, #FF2E3C 0%, #D81A27 100%);
+  box-shadow: 0 8px 30px 0px rgba(228, 30, 43, 0.75);
   transform: translateY(-1px);
 }
 
-/* Minimal Custom Scrollbar */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(8, 12, 20, 0.6);
+  background: rgba(10, 2, 3, 0.8);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.6);
+  background: rgba(228, 30, 43, 0.4);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.6);
+  background: rgba(228, 30, 43, 0.7);
 }
 
 
