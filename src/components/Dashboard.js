@@ -17,6 +17,8 @@ export default function Dashboard() {
   const [summary, setSummary] = useState(null);
   const [segments, setSegments] = useState([]); // Store Diarization Segments
   const [history, setHistory] = useState([]);
+  const [selectedLanguage, setSelectedLanguage] = useState('auto');
+  const [detectedLanguage, setDetectedLanguage] = useState('auto');
   const [isEditing, setIsEditing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [editContent, setEditContent] = useState('');
@@ -585,7 +587,8 @@ export default function Dashboard() {
         body: JSON.stringify({
           user_id: user.email,
           meeting_url: meetingLink,
-          bot_name: 'Talktrace Bot'
+          bot_name: 'Talktrace Bot',
+          language: selectedLanguage
         })
       });
 
@@ -621,6 +624,7 @@ export default function Dashboard() {
           }
         });
         const data = await res.json();
+        if (data.language) setDetectedLanguage(data.language);
 
         // Handle fine-grained status
         // const serverStatus = data.status; // Unused
@@ -1278,6 +1282,35 @@ export default function Dashboard() {
                     Deploy Assistant Bot
                   </h2>
                   <div className="space-y-6">
+                    {/* Language Selector Dropdown */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 backdrop-blur-md">
+                      <span className="text-xs font-semibold text-slate-300 flex items-center gap-2">
+                        <span className="text-sm">🌐</span>
+                        <span>Speech & Summary Language:</span>
+                      </span>
+                      <select
+                        value={selectedLanguage}
+                        onChange={(e) => setSelectedLanguage(e.target.value)}
+                        disabled={status !== 'idle'}
+                        className="bg-slate-950 text-white text-xs font-medium rounded-lg px-3 py-2 border border-slate-700/80 focus:outline-none focus:border-blue-500 transition-all cursor-pointer shadow-sm"
+                      >
+                        <option value="auto">🌐 Auto-Detect Language (Recommended)</option>
+                        <option value="en">🇺🇸 English</option>
+                        <option value="es">🇪🇸 Spanish (Español)</option>
+                        <option value="fr">🇫🇷 French (Français)</option>
+                        <option value="de">🇩🇪 German (Deutsch)</option>
+                        <option value="hi">🇮🇳 Hindi (हिन्दी)</option>
+                        <option value="ml">🇮🇳 Malayalam (മലയാളം)</option>
+                        <option value="ta">🇮🇳 Tamil (தமிழ்)</option>
+                        <option value="zh">🇨🇳 Chinese (中文)</option>
+                        <option value="ja">🇯🇵 Japanese (日本語)</option>
+                        <option value="ar">🇸🇦 Arabic (العربية)</option>
+                        <option value="pt">🇵🇹 Portuguese (Português)</option>
+                        <option value="it">🇮🇹 Italian (Italiano)</option>
+                        <option value="ru">🇷🇺 Russian (Русский)</option>
+                      </select>
+                    </div>
+
                     <div className="relative group">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-400 transition-colors">
                         <Link2 className="w-5 h-5" />
@@ -1334,6 +1367,11 @@ export default function Dashboard() {
                     }`}>
                     {status}
                   </div>
+                  {detectedLanguage && (
+                    <div className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded-full text-xs font-mono font-medium flex items-center gap-1.5">
+                      <span>🌐 {detectedLanguage.toUpperCase()}</span>
+                    </div>
+                  )}
                 </div>
 
                 {status === 'active' && (
