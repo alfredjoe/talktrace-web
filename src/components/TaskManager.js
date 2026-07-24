@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckSquare, Square, Download, Plus, Edit2, Check, AlertCircle, Shield, Sparkles } from 'lucide-react';
+import { CheckSquare, Square, Edit2, Sparkles } from 'lucide-react';
 
 export default function TaskManager({ actions = [], meetingId = 'meeting' }) {
   const [taskList, setTaskList] = useState(() => {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Check, Search, X, Trash2, History, Square } from 'lucide-react';
+import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Check, Square } from 'lucide-react';
 import Analytics from './Analytics';
 import GlobalSearch from './GlobalSearch';
 import TaskManager from './TaskManager';
@@ -44,11 +44,6 @@ export default function Dashboard() {
   const [isHistorical, setIsHistorical] = useState(false); // To differentiate new vs historical loads
   const [transcript, setTranscript] = useState(''); // Transcript state
   const [activeTab, setActiveTab] = useState('transcript'); // 'transcript' or 'summary'
-
-  // Search History & Filtering States
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchHistory, setSearchHistory] = useState([]);
-  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
   // Generate RSA-OAEP Key Pair on Mount (Dynamic Session Handshake)
   useEffect(() => {
@@ -153,7 +148,6 @@ export default function Dashboard() {
           return dateB - dateA;
         });
         setMeetings(validMeetings);
-        fetchSearchHistory();
 
         // Auto-resume logic: Find most recent non-completed meeting?
         // Or just let user choose from library.
@@ -200,144 +194,6 @@ export default function Dashboard() {
       console.error("Resume error:", err);
       alert(`Failed to resume: ${err.message}`);
     }
-  };
-
-  // Action Item Exporter & State
-  const [completedTasks, setCompletedTasks] = useState({});
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-
-  const toggleTaskCompleted = (index) => {
-    setCompletedTasks(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
-  };
-
-  const exportActionsToCSV = () => {
-    if (!summary || !summary.actions || summary.actions.length === 0) {
-      alert("No action items available to export.");
-      return;
-    }
-    const headers = ["Task", "Assignee", "Deadline", "Status", "Confidence"];
-    const rows = summary.actions.map((act, i) => {
-      const isString = typeof act === 'string';
-      const task = isString ? act : (act.task || act.action || "Task");
-      const assignee = isString ? "Unassigned" : (act.assignee || act.with || "Unassigned");
-      const deadline = isString ? "ASAP" : (act.deadline || act.details || "ASAP");
-      const status = completedTasks[i] ? "Completed" : "Open";
-      const confidence = isString ? "90%" : `${Math.round((act.confidence || 0.95) * 100)}%`;
-      return [
-        `"${task.replace(/"/g, '""')}"`,
-        `"${assignee.replace(/"/g, '""')}"`,
-        `"${deadline.replace(/"/g, '""')}"`,
-        `"${status}"`,
-        `"${confidence}"`
-      ];
-    });
-
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `talktrace_action_items_${meetingId || 'export'}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const exportActionsToJiraJSON = () => {
-    if (!summary || !summary.actions || summary.actions.length === 0) {
-      alert("No action items available to export.");
-      return;
-    }
-    const jiraIssues = summary.actions.map((act, i) => {
-      const isString = typeof act === 'string';
-      const task = isString ? act : (act.task || act.action || "Task");
-      const assignee = isString ? "Unassigned" : (act.assignee || act.with || "Unassigned");
-      const deadline = isString ? "ASAP" : (act.deadline || act.details || "ASAP");
-      return {
-        fields: {
-          project: { key: "TT" },
-          summary: task,
-          description: `Extracted from Talktrace Meeting: ${meetingId || 'Session'}. Deadline: ${deadline}`,
-          issuetype: { name: "Task" },
-          assignee: { displayName: assignee },
-          customfield_confidence: isString ? 0.9 : (act.confidence || 0.95)
-        }
-      };
-    });
-
-    const jsonStr = JSON.stringify({ issues: jiraIssues }, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `talktrace_jira_issues_${meetingId || 'export'}.json`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const exportActionsToTrelloJSON = () => {
-    if (!summary || !summary.actions || summary.actions.length === 0) {
-      alert("No action items available to export.");
-      return;
-    }
-    const trelloCards = summary.actions.map((act, i) => {
-      const isString = typeof act === 'string';
-      const task = isString ? act : (act.task || act.action || "Task");
-      const assignee = isString ? "Unassigned" : (act.assignee || act.with || "Unassigned");
-      const deadline = isString ? "ASAP" : (act.deadline || act.details || "ASAP");
-      return {
-        name: task,
-        desc: `Assignee: ${assignee}\nDeadline: ${deadline}\nSource: TalkTrace AI Vault`,
-        closed: !!completedTasks[i],
-        due: null
-      };
-    });
-
-    const jsonStr = JSON.stringify({ name: `Talktrace Meeting ${meetingId}`, cards: trelloCards }, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `talktrace_trello_board_${meetingId || 'export'}.json`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleGlobalSearch = (query) => {
-    setSearchQuery(query);
-    if (!query || query.trim().length < 2) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    setIsSearching(true);
-    const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 1);
-    const matches = [];
-
-    meetings.forEach(m => {
-      const title = m.meeting_id || '';
-      let score = 0;
-      terms.forEach(t => {
-        if (title.toLowerCase().includes(t)) score += 5;
-      });
-
-      if (score > 0) {
-        matches.push({
-          meeting: m,
-          score,
-          snippet: `Recorded meeting session (${new Date(m.created_at || Date.now()).toLocaleDateString()})`
-        });
-      }
-    });
-
-    setSearchResults(matches);
   };
 
   const handleRenameSpeaker = async (oldSpeakerName) => {
@@ -1174,82 +1030,8 @@ export default function Dashboard() {
     window.history.pushState({}, '', window.location.pathname);
   };
 
-  // --- SEARCH HISTORY HANDLERS (USER-ISOLATED) ---
-  const fetchSearchHistory = async () => {
-    try {
-      const token = await user.getIdToken();
-      const res = await fetch(`${API_BASE}/api/search-history`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSearchHistory(data.history || []);
-      }
-    } catch (e) {
-      console.error("Search history fetch error:", e);
-    }
-  };
-
-  const saveSearchQuery = async (queryToSave) => {
-    const q = (queryToSave || searchQuery).trim();
-    if (!q) return;
-    try {
-      const token = await user.getIdToken();
-      await fetch(`${API_BASE}/api/search-history`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ query: q })
-      });
-      fetchSearchHistory();
-    } catch (e) {
-      console.error("Search query save error:", e);
-    }
-  };
-
-  const deleteSearchHistoryItem = async (e, id) => {
-    e.stopPropagation();
-    try {
-      const token = await user.getIdToken();
-      await fetch(`${API_BASE}/api/search-history/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      setSearchHistory(prev => prev.filter(item => item.id !== id));
-    } catch (e) {
-      console.error("Search history delete error:", e);
-    }
-  };
-
-  const clearSearchHistory = async (e) => {
-    e.stopPropagation();
-    try {
-      const token = await user.getIdToken();
-      await fetch(`${API_BASE}/api/search-history`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      setSearchHistory([]);
-    } catch (e) {
-      console.error("Clear search history error:", e);
-    }
-  };
-
   // Render Helpers
   const renderLibrary = () => {
-    const filteredMeetings = meetings.filter(m => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase().trim();
-      const titleMatch = (m.title || '').toLowerCase().includes(q);
-      const idMatch = (m.meeting_id || '').toLowerCase().includes(q);
-      const statusMatch = (m.status || '').toLowerCase().includes(q);
-      const langMatch = (m.language || '').toLowerCase().includes(q);
-      const dateMatch = (m.date || '').toLowerCase().includes(q);
-      return titleMatch || idMatch || statusMatch || langMatch || dateMatch;
-    });
-
     return (
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
         <h2 className="text-xl font-bold mb-6 flex items-center gap-3 text-white">
@@ -1269,14 +1051,14 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredMeetings.length === 0 ? (
+          {meetings.length === 0 ? (
             <div className="col-span-2 text-center py-12 sleek-card rounded-xl border border-dashed border-slate-800">
               <p className="text-slate-400 text-sm">
-                {searchQuery.trim() ? `No meetings matching "${searchQuery}"` : "No previous recordings found."}
+                No previous recordings found.
               </p>
             </div>
           ) : (
-            filteredMeetings.map(m => (
+            meetings.map(m => (
               <div key={m.meeting_id}
                 onClick={() => loadHistoricalMeeting(m)}
                 className="sleek-card-hover p-5 cursor-pointer border border-slate-800 hover:border-blue-500/40 transition-all group">

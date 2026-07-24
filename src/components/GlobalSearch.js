@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Sparkles, X, History, ArrowRight, Shield, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Sparkles, X, ArrowRight, Shield } from 'lucide-react';
 
 // IndexedDB Helper for Local Vector Store
 const DB_NAME = 'TalkTraceVectorDB';
@@ -42,7 +42,6 @@ export async function storeVectorChunks(meetingId, segments = []) {
 
 export default function GlobalSearch({ meetings = [], onLoadMeeting }) {
   const [query, setQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [aiAnswer, setAiAnswer] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -54,7 +53,6 @@ export default function GlobalSearch({ meetings = [], onLoadMeeting }) {
       return;
     }
 
-    setIsSearching(true);
     setAiAnswer(null);
 
     const terms = searchQuery.toLowerCase().split(/\s+/).filter(t => t.length > 1);
@@ -106,7 +104,6 @@ export default function GlobalSearch({ meetings = [], onLoadMeeting }) {
         setAiAnswer(`Found ${matches.length} relevant meeting sessions locally in zero-cloud vault.`);
       }
     }
-    setIsSearching(false);
   };
 
   return (
