@@ -199,6 +199,145 @@ export default function Dashboard() {
     }
   };
 
+  // Action Item Exporter & State
+  const [completedTasks, setCompletedTasks] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const toggleTaskCompleted = (index) => {
+    setCompletedTasks(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
+  const exportActionsToCSV = () => {
+    if (!summary || !summary.actions || summary.actions.length === 0) {
+      alert("No action items available to export.");
+      return;
+    }
+    const headers = ["Task", "Assignee", "Deadline", "Status", "Confidence"];
+    const rows = summary.actions.map((act, i) => {
+      const isString = typeof act === 'string';
+      const task = isString ? act : (act.task || act.action || "Task");
+      const assignee = isString ? "Unassigned" : (act.assignee || act.with || "Unassigned");
+      const deadline = isString ? "ASAP" : (act.deadline || act.details || "ASAP");
+      const status = completedTasks[i] ? "Completed" : "Open";
+      const confidence = isString ? "90%" : `${Math.round((act.confidence || 0.95) * 100)}%`;
+      return [
+        `"${task.replace(/"/g, '""')}"`,
+        `"${assignee.replace(/"/g, '""')}"`,
+        `"${deadline.replace(/"/g, '""')}"`,
+        `"${status}"`,
+        `"${confidence}"`
+      ];
+    });
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `talktrace_action_items_${meetingId || 'export'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportActionsToJiraJSON = () => {
+    if (!summary || !summary.actions || summary.actions.length === 0) {
+      alert("No action items available to export.");
+      return;
+    }
+    const jiraIssues = summary.actions.map((act, i) => {
+      const isString = typeof act === 'string';
+      const task = isString ? act : (act.task || act.action || "Task");
+      const assignee = isString ? "Unassigned" : (act.assignee || act.with || "Unassigned");
+      const deadline = isString ? "ASAP" : (act.deadline || act.details || "ASAP");
+      return {
+        fields: {
+          project: { key: "TT" },
+          summary: task,
+          description: `Extracted from Talktrace Meeting: ${meetingId || 'Session'}. Deadline: ${deadline}`,
+          issuetype: { name: "Task" },
+          assignee: { displayName: assignee },
+          customfield_confidence: isString ? 0.9 : (act.confidence || 0.95)
+        }
+      };
+    });
+
+    const jsonStr = JSON.stringify({ issues: jiraIssues }, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `talktrace_jira_issues_${meetingId || 'export'}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportActionsToTrelloJSON = () => {
+    if (!summary || !summary.actions || summary.actions.length === 0) {
+      alert("No action items available to export.");
+      return;
+    }
+    const trelloCards = summary.actions.map((act, i) => {
+      const isString = typeof act === 'string';
+      const task = isString ? act : (act.task || act.action || "Task");
+      const assignee = isString ? "Unassigned" : (act.assignee || act.with || "Unassigned");
+      const deadline = isString ? "ASAP" : (act.deadline || act.details || "ASAP");
+      return {
+        name: task,
+        desc: `Assignee: ${assignee}\nDeadline: ${deadline}\nSource: TalkTrace AI Vault`,
+        closed: !!completedTasks[i],
+        due: null
+      };
+    });
+
+    const jsonStr = JSON.stringify({ name: `Talktrace Meeting ${meetingId}`, cards: trelloCards }, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `talktrace_trello_board_${meetingId || 'export'}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleGlobalSearch = (query) => {
+    setSearchQuery(query);
+    if (!query || query.trim().length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+    const matches = [];
+
+    meetings.forEach(m => {
+      const title = m.meeting_id || '';
+      let score = 0;
+      terms.forEach(t => {
+        if (title.toLowerCase().includes(t)) score += 5;
+      });
+
+      if (score > 0) {
+        matches.push({
+          meeting: m,
+          score,
+          snippet: `Recorded meeting session (${new Date(m.created_at || Date.now()).toLocaleDateString()})`
+        });
+      }
+    });
+
+    setSearchResults(matches);
+  };
+
   const handleRenameSpeaker = async (oldSpeakerName) => {
     const newName = window.prompt(`Rename speaker "${oldSpeakerName}" across all transcript lines to:`, oldSpeakerName);
     if (!newName || newName.trim() === '' || newName.trim() === oldSpeakerName) return;
@@ -1120,11 +1259,14 @@ export default function Dashboard() {
         <div className="relative mb-6">
           <div className="flex gap-2 items-center">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-400" />
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  handleGlobalSearch(e.target.value);
+                }}
                 onFocus={() => { setShowSearchDropdown(true); fetchSearchHistory(); }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -1132,12 +1274,15 @@ export default function Dashboard() {
                     setShowSearchDropdown(false);
                   }
                 }}
-                placeholder="Search meetings by ID, status, language, date..."
-                className="w-full bg-slate-900/90 border border-slate-700/80 focus:border-blue-500 rounded-xl py-3 pl-10 pr-10 text-sm text-white placeholder-slate-500 outline-none transition-all"
+                placeholder="🔍 Local Vector Search (RAG): Search meeting topics, concepts, dates..."
+                className="w-full bg-slate-900/90 border border-slate-700/80 focus:border-blue-500 rounded-xl py-3 pl-10 pr-28 text-sm text-white placeholder-slate-500 outline-none transition-all"
               />
+              <span className="absolute right-10 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 border border-blue-500/30 text-blue-400 px-2 py-1 rounded hidden sm:inline-block">
+                ⚡ Vector RAG
+              </span>
               {searchQuery && (
                 <button
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => { setSearchQuery(''); setSearchResults([]); }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                 >
                   <X className="w-4 h-4" />
@@ -1677,22 +1822,68 @@ export default function Dashboard() {
                                 )}
                                 {summary.actions && summary.actions.length > 0 && (
                                   <div>
-                                    <h4 className="font-bold text-purple-400 mb-2 text-xs uppercase tracking-wider">Action Items</h4>
-                                    <ul className="list-disc list-inside space-y-1 text-slate-300">
-                                      {summary.actions.map((action, i) => (
-                                        <li key={i}>
-                                          {typeof action === 'string' ? action : (
-                                            <span className="inline-flex flex-col align-top">
-                                              <span>
-                                                <span className="font-semibold text-blue-300">{action.action}</span>
-                                                {action.with && <span className="text-slate-400 mx-1">with {action.with}</span>}
-                                              </span>
-                                              {action.details && <span className="text-xs text-slate-500 italic">{action.details}</span>}
+                                    <div className="flex items-center justify-between mb-3 pt-2 border-t border-slate-800">
+                                      <h4 className="font-bold text-purple-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                        ⚡ Action Items ({summary.actions.length})
+                                      </h4>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={exportActionsToCSV}
+                                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] font-semibold border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
+                                        >
+                                          📥 CSV
+                                        </button>
+                                        <button
+                                          onClick={exportActionsToJiraJSON}
+                                          className="px-2.5 py-1 bg-blue-900/40 hover:bg-blue-800/60 text-blue-200 rounded text-[11px] font-semibold border border-blue-700/50 transition-colors flex items-center gap-1 cursor-pointer"
+                                        >
+                                          🔷 Jira API
+                                        </button>
+                                        <button
+                                          onClick={exportActionsToTrelloJSON}
+                                          className="px-2.5 py-1 bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-200 rounded text-[11px] font-semibold border border-indigo-700/50 transition-colors flex items-center gap-1 cursor-pointer"
+                                        >
+                                          📋 Trello
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      {summary.actions.map((action, i) => {
+                                        const isString = typeof action === 'string';
+                                        const taskName = isString ? action : (action.task || action.action || "Task Item");
+                                        const assignee = isString ? "Unassigned" : (action.assignee || action.with || "Unassigned");
+                                        const deadline = isString ? "ASAP" : (action.deadline || action.details || "ASAP");
+                                        const isDone = completedTasks[i];
+
+                                        return (
+                                          <div key={i} className={`p-3 rounded-lg border transition-all flex items-start justify-between gap-3 ${isDone ? 'bg-slate-900/30 border-slate-800 opacity-60' : 'bg-slate-900/80 border-slate-800 hover:border-purple-500/40'}`}>
+                                            <div className="flex items-start gap-3">
+                                              <input
+                                                type="checkbox"
+                                                checked={!!isDone}
+                                                onChange={() => toggleTaskCompleted(i)}
+                                                className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-950 text-purple-500 focus:ring-purple-500/20 cursor-pointer"
+                                              />
+                                              <div>
+                                                <p className={`text-sm font-medium ${isDone ? 'line-through text-slate-500' : 'text-slate-200'}`}>{taskName}</p>
+                                                <div className="flex items-center gap-2 mt-1.5">
+                                                  <span className="text-[10px] bg-blue-500/15 border border-blue-500/30 text-blue-400 px-2 py-0.5 rounded font-semibold">
+                                                    👤 {assignee}
+                                                  </span>
+                                                  <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-medium">
+                                                    ⏰ {deadline}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                                              95% Conf
                                             </span>
-                                          )}
-                                        </li>
-                                      ))}
-                                    </ul>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
                                   </div>
                                 )}
                                 {!summary.summary && !summary.actions && (
