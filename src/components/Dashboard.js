@@ -1522,20 +1522,80 @@ export default function Dashboard() {
                             typeof summary === 'string' ? (
                               <p>{summary}</p>
                             ) : (
-                              <div className="space-y-4">
+                              <div className="space-y-6">
+                                {/* Executive Overview */}
                                 {summary.summary && (
-                                  <div>
-                                    <h4 className="font-bold text-blue-400 mb-2 text-xs uppercase tracking-wider">Overview</h4>
-                                    <p className="text-slate-300">{summary.summary}</p>
+                                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                    <h4 className="font-bold text-blue-400 mb-2 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                      📄 Executive Summary
+                                    </h4>
+                                    <p className="text-slate-200 text-sm leading-relaxed">{summary.summary}</p>
                                   </div>
                                 )}
+
+                                {/* Meeting Agenda */}
+                                {summary.agenda && summary.agenda.length > 0 && (
+                                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                    <h4 className="font-bold text-cyan-400 mb-2 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                      📋 Planned Agenda & Scope
+                                    </h4>
+                                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-300">
+                                      {summary.agenda.map((ag, i) => <li key={i}>{ag}</li>)}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* Discussion Points & Key Arguments */}
+                                {summary.discussion_points && summary.discussion_points.length > 0 && (
+                                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                    <h4 className="font-bold text-indigo-400 mb-2 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                      💡 Key Discussion Points
+                                    </h4>
+                                    <ul className="list-disc list-inside space-y-1.5 text-xs text-slate-300">
+                                      {summary.discussion_points.map((dp, i) => <li key={i}>{dp}</li>)}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* Agreed Decisions */}
+                                {summary.decisions && summary.decisions.length > 0 && (
+                                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                    <h4 className="font-bold text-emerald-400 mb-2 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                      ✅ Agreed Decisions
+                                    </h4>
+                                    <ul className="list-disc list-inside space-y-1 text-xs text-emerald-300/90 font-medium">
+                                      {summary.decisions.map((dec, i) => <li key={i}>{dec}</li>)}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* Risks & Blockers */}
+                                {summary.risks && summary.risks.length > 0 && (
+                                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                    <h4 className="font-bold text-amber-400 mb-2 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                      ⚠️ Identified Risks & Blockers
+                                    </h4>
+                                    <ul className="list-disc list-inside space-y-1 text-xs text-amber-200/90 font-medium">
+                                      {summary.risks.map((risk, i) => <li key={i}>{risk}</li>)}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* Action Items Board */}
                                 {summary.actions && summary.actions.length > 0 && (
                                   <div className="pt-2 border-t border-slate-800">
                                     <TaskManager actions={summary.actions} meetingId={meetingId} />
                                   </div>
                                 )}
-                                {!summary.summary && !summary.actions && (
-                                  <pre className="whitespace-pre-wrap">{JSON.stringify(summary, null, 2)}</pre>
+
+                                {/* Next Meeting Schedule */}
+                                {summary.next_meeting && (
+                                  <div className="bg-purple-950/30 p-4 rounded-xl border border-purple-500/30">
+                                    <h4 className="font-bold text-purple-300 mb-1 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                      📅 Next Meeting Schedule
+                                    </h4>
+                                    <p className="text-xs text-purple-200 font-semibold">{summary.next_meeting}</p>
+                                  </div>
                                 )}
                               </div>
                             )
