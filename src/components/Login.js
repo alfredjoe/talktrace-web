@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth } from '../firebase';
-import { Mail, Lock, ArrowRight, Mic, CheckCircle2, Sparkles } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Mic, CheckCircle2, Sparkles, RefreshCw } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [unverifiedUser, setUnverifiedUser] = useState(null);
+  const [resendMsg, setResendMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -15,14 +17,32 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setUnverifiedUser(null);
+    setResendMsg('');
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      if (!userCredential.user.emailVerified) {
+        setUnverifiedUser(userCredential.user);
+        setError('Your email is not verified yet. Please verify your email to access the dashboard.');
+        setLoading(false);
+        return;
+      }
       navigate('/dashboard');
     } catch (err) {
       setError('Invalid email or password');
     }
     setLoading(false);
+  };
+
+  const handleResend = async () => {
+    if (!unverifiedUser) return;
+    try {
+      await sendEmailVerification(unverifiedUser);
+      setResendMsg('Verification email re-sent! Check your inbox.');
+    } catch (e) {
+      setResendMsg('Failed to resend. Please try again in a few moments.');
+    }
   };
 
   return (
@@ -48,9 +68,25 @@ export default function Login() {
         </div>
         
         {error && (
-          <div className="bg-red-500/10 border border-red-500/40 text-red-300 p-3.5 rounded-xl mb-6 text-xs font-semibold animate-in fade-in slide-in-from-top-2 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
-            {error}
+          <div className="bg-red-500/10 border border-red-500/40 text-red-300 p-3.5 rounded-xl mb-6 text-xs font-semibold animate-in fade-in slide-in-from-top-2 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
+              <span>{error}</span>
+            </div>
+            {unverifiedUser && (
+              <button
+                type="button"
+                onClick={handleResend}
+                className="w-full mt-2 py-2 bg-blue-950/80 hover:bg-blue-900/80 border border-blue-500/40 text-blue-300 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Resend Verification Email
+              </button>
+            )}
+            {resendMsg && (
+              <div className="text-[11px] text-emerald-400 font-bold mt-1 text-center">
+                {resendMsg}
+              </div>
+            )}
           </div>
         )}
 

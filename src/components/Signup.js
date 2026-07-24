@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth } from '../firebase';
-import { Mail, Lock, ArrowRight, Mic, CheckCircle2, Sparkles } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Mic, CheckCircle2, Sparkles, Send, RefreshCw } from 'lucide-react';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -10,6 +10,9 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [currentUserObj, setCurrentUserObj] = useState(null);
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
@@ -24,12 +27,25 @@ export default function Signup() {
     }
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      navigate('/dashboard');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(userCredential.user);
+      setCurrentUserObj(userCredential.user);
+      setVerificationSent(true);
     } catch (err) {
-      setError('Email already exists or invalid format');
+      setError(err.message.includes('email-already-in-use') ? 'Email already registered' : 'Failed to create account. Please check email format.');
     }
     setLoading(false);
+  };
+
+  const handleResendEmail = async () => {
+    if (!currentUserObj) return;
+    setResendMessage('');
+    try {
+      await sendEmailVerification(currentUserObj);
+      setResendMessage('Verification email re-sent successfully!');
+    } catch (err) {
+      setResendMessage('Failed to resend. Please wait a moment and try again.');
+    }
   };
 
   return (
@@ -54,12 +70,51 @@ export default function Signup() {
           </p>
         </div>
         
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/40 text-red-300 p-3.5 rounded-xl mb-6 text-xs font-semibold animate-in fade-in slide-in-from-top-2 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
-            {error}
+        {verificationSent ? (
+          <div className="text-center space-y-6 animate-in fade-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 rounded-full bg-blue-500/20 border border-blue-400/40 flex items-center justify-center mx-auto text-blue-400">
+              <Send className="w-8 h-8 animate-bounce" />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">Check Your Inbox! 📬</h2>
+              <p className="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto">
+                We have sent a verification link to <strong className="text-blue-400 font-semibold">{email}</strong>. Please click the link to verify your email address.
+              </p>
+            </div>
+
+            {resendMessage && (
+              <div className="bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 p-3 rounded-xl text-xs font-semibold">
+                {resendMessage}
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-slate-800 space-y-3">
+              <button
+                type="button"
+                onClick={handleResendEmail}
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Resend Verification Email
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="w-full py-3.5 btn-sleek-primary text-white rounded-xl text-sm font-bold transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+              >
+                Proceed to Login <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/40 text-red-300 p-3.5 rounded-xl mb-6 text-xs font-semibold animate-in fade-in slide-in-from-top-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
+                {error}
+              </div>
+            )}
 
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
@@ -134,6 +189,8 @@ export default function Signup() {
             Sign in
           </Link>
         </p>
+          </>
+        )}
       </div>
     </div>
   );
