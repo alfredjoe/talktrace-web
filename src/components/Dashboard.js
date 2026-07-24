@@ -199,6 +199,51 @@ export default function Dashboard() {
     }
   };
 
+  const handleRenameSpeaker = async (oldSpeakerName) => {
+    const newName = window.prompt(`Rename speaker "${oldSpeakerName}" across all transcript lines to:`, oldSpeakerName);
+    if (!newName || newName.trim() === '' || newName.trim() === oldSpeakerName) return;
+
+    const trimmedName = newName.trim();
+    const updatedSegments = segments.map(seg => {
+      if (seg.speaker === oldSpeakerName) {
+        return { ...seg, speaker: trimmedName };
+      }
+      return seg;
+    });
+
+    setSegments(updatedSegments);
+    setEditSegments(updatedSegments);
+
+    // Save directly to server as a new version
+    try {
+      addLog(`Renaming speaker "${oldSpeakerName}" to "${trimmedName}"...`);
+      const token = await user.getIdToken();
+      const fullText = updatedSegments.map(s => `${s.speaker}: ${s.text}`).join('\n');
+
+      const res = await fetch(`${API_BASE}/api/edit/${meetingId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          text: fullText,
+          segments: updatedSegments,
+          user_id: user.email
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        addLog(`Speaker renamed to "${trimmedName}". New version saved.`);
+        fetchHistory(meetingId);
+      }
+    } catch (e) {
+      console.error("Rename speaker error:", e);
+      addLog(`Failed to save speaker rename: ${e.message}`);
+    }
+  };
+
   const saveEdit = async () => {
     try {
       addLog("Saving new version...");
@@ -1587,11 +1632,19 @@ export default function Dashboard() {
                               const isSystem = seg.speaker === "System";
                               return (
                                 <div key={i} className={`flex flex-col gap-1 ${isSystem ? 'opacity-50' : ''}`}>
-                                  <span className={`text-xs font-bold uppercase tracking-wider ${isSpeaker1 ? 'text-blue-400' :
-                                    seg.speaker === "Speaker" ? 'text-slate-400' : 'text-purple-400'
-                                    }`}>
-                                    {seg.speaker} <span className="text-slate-600 font-normal normal-case ml-2">{new Date(seg.start * 1000).toISOString().substr(14, 5)}</span>
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      onClick={() => handleRenameSpeaker(seg.speaker)}
+                                      title="Click to rename speaker across transcript"
+                                      className={`text-xs font-bold uppercase tracking-wider cursor-pointer hover:underline flex items-center gap-1.5 ${isSpeaker1 ? 'text-blue-400' :
+                                        seg.speaker === "Speaker" ? 'text-slate-400' : 'text-purple-400'
+                                        }`}
+                                    >
+                                      <span>👤 {seg.speaker}</span>
+                                      <span className="text-[10px] opacity-60 hover:opacity-100 bg-slate-800 px-1.5 py-0.5 rounded text-slate-300 font-normal">✏️ Edit</span>
+                                    </span>
+                                    <span className="text-slate-600 font-normal text-xs">{new Date(seg.start * 1000).toISOString().substr(14, 5)}</span>
+                                  </div>
                                   <p className="text-slate-300 text-sm pl-0">{seg.text}</p>
                                 </div>
                               );
