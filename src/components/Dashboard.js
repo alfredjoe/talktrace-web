@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Check, Search, X, Trash2, History, Square } from 'lucide-react';
+import Analytics from './Analytics';
 import forge from 'node-forge';
 import { jsPDF } from "jspdf";
 import streamSaver from 'streamsaver';
@@ -201,7 +202,6 @@ export default function Dashboard() {
 
   // Action Item Exporter & State
   const [completedTasks, setCompletedTasks] = useState({});
-  const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -1672,28 +1672,27 @@ export default function Dashboard() {
                 <div className="mb-6 p-6 bg-slate-900/50 rounded-xl border border-slate-700">
                   {/* Tabs */}
                   <div className="flex items-center gap-6 mb-4 border-b border-slate-700/50 pb-2">
-                    <button onClick={() => { setActiveTab('transcript'); fetchHistory(meetingId, 'transcript'); }} className={`text-sm font-semibold pb-2 border-b-2 transition-all ${activeTab === 'transcript' ? 'text-blue-400 border-blue-400' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
+                    <button onClick={() => { setActiveTab('transcript'); fetchHistory(meetingId, 'transcript'); }} className={`text-sm font-semibold pb-2 border-b-2 transition-all cursor-pointer ${activeTab === 'transcript' ? 'text-blue-400 border-blue-400' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
                       Transcript
                     </button>
-                    <button onClick={() => { setActiveTab('summary'); fetchHistory(meetingId, 'summary'); }} className={`text-sm font-semibold pb-2 border-b-2 transition-all ${activeTab === 'summary' ? 'text-purple-400 border-purple-400' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
+                    <button onClick={() => { setActiveTab('summary'); fetchHistory(meetingId, 'summary'); }} className={`text-sm font-semibold pb-2 border-b-2 transition-all cursor-pointer ${activeTab === 'summary' ? 'text-purple-400 border-purple-400' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
                       Summary & Actions
+                    </button>
+                    <button onClick={() => setActiveTab('analytics')} className={`text-sm font-semibold pb-2 border-b-2 transition-all cursor-pointer ${activeTab === 'analytics' ? 'text-emerald-400 border-emerald-400' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
+                      📊 Meeting Analytics
                     </button>
                   </div>
 
                   <div className="flex justify-end items-center mb-4 gap-2">
-                    {/* Dropdown removed as per backend protocol (Phase 3 & 5 says backend does it all) */}
-                    {/* Only "Generate" is irrelevant now as we just fetch what backend pushed. */}
-                    {/* We can show a status or refresh button? */}
-                    <span className="text-xs text-slate-500 uppercase tracking-widest">
+                    <span className="text-xs text-slate-500 uppercase tracking-widest font-medium">
                       Secured by TalkTrace Private Pipeline
                     </span>
                   </div>
 
-                  {/* Removed progress bar as backend does transcription */}
-
                   <div className="animate-in fade-in slide-in-from-bottom-2">
-
-                    {activeTab === 'transcript' ? (
+                    {activeTab === 'analytics' ? (
+                      <Analytics segments={segments} />
+                    ) : activeTab === 'transcript' ? (
                       // Transcript View: Toggle between Diarized Chat and Segment Editor
                       segments.length > 0 ? (
                         isEditing ? (
