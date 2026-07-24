@@ -88,15 +88,29 @@ export default function TaskManager({ actions = [], meetingId = 'meeting' }) {
     ? taskList
     : taskList.filter(t => t.priority === filterPriority);
 
+  const completedCount = taskList.filter(t => t.completed).length;
+  const totalCount = taskList.length;
+  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
   return (
     <div className="space-y-4">
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-900/80 p-4 rounded-xl border border-slate-800">
-        <div>
+        <div className="w-full sm:w-auto">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-purple-400" /> Automated Action Item Sync Board
+            <Sparkles className="w-4 h-4 text-purple-400" /> AI Action Item Extraction & Task Sync
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">Edit, check off, and export tasks to GitHub, Jira, or Trello</p>
+          <div className="flex items-center gap-3 mt-1.5">
+            <div className="w-36 h-2 bg-slate-950 rounded-full border border-slate-800 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 transition-all duration-500 rounded-full"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <span className="text-[11px] font-bold text-slate-300">
+              {completedCount} / {totalCount} Completed ({progressPercent}%)
+            </span>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
