@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Check, Search, X, Trash2, History, Square } from 'lucide-react';
 import Analytics from './Analytics';
 import GlobalSearch from './GlobalSearch';
+import TaskManager from './TaskManager';
 import forge from 'node-forge';
 import { jsPDF } from "jspdf";
 import streamSaver from 'streamsaver';
@@ -1735,69 +1736,8 @@ export default function Dashboard() {
                                   </div>
                                 )}
                                 {summary.actions && summary.actions.length > 0 && (
-                                  <div>
-                                    <div className="flex items-center justify-between mb-3 pt-2 border-t border-slate-800">
-                                      <h4 className="font-bold text-purple-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                                        ⚡ Action Items ({summary.actions.length})
-                                      </h4>
-                                      <div className="flex gap-2">
-                                        <button
-                                          onClick={exportActionsToCSV}
-                                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] font-semibold border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
-                                        >
-                                          📥 CSV
-                                        </button>
-                                        <button
-                                          onClick={exportActionsToJiraJSON}
-                                          className="px-2.5 py-1 bg-blue-900/40 hover:bg-blue-800/60 text-blue-200 rounded text-[11px] font-semibold border border-blue-700/50 transition-colors flex items-center gap-1 cursor-pointer"
-                                        >
-                                          🔷 Jira API
-                                        </button>
-                                        <button
-                                          onClick={exportActionsToTrelloJSON}
-                                          className="px-2.5 py-1 bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-200 rounded text-[11px] font-semibold border border-indigo-700/50 transition-colors flex items-center gap-1 cursor-pointer"
-                                        >
-                                          📋 Trello
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      {summary.actions.map((action, i) => {
-                                        const isString = typeof action === 'string';
-                                        const taskName = isString ? action : (action.task || action.action || "Task Item");
-                                        const assignee = isString ? "Unassigned" : (action.assignee || action.with || "Unassigned");
-                                        const deadline = isString ? "ASAP" : (action.deadline || action.details || "ASAP");
-                                        const isDone = completedTasks[i];
-
-                                        return (
-                                          <div key={i} className={`p-3 rounded-lg border transition-all flex items-start justify-between gap-3 ${isDone ? 'bg-slate-900/30 border-slate-800 opacity-60' : 'bg-slate-900/80 border-slate-800 hover:border-purple-500/40'}`}>
-                                            <div className="flex items-start gap-3">
-                                              <input
-                                                type="checkbox"
-                                                checked={!!isDone}
-                                                onChange={() => toggleTaskCompleted(i)}
-                                                className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-950 text-purple-500 focus:ring-purple-500/20 cursor-pointer"
-                                              />
-                                              <div>
-                                                <p className={`text-sm font-medium ${isDone ? 'line-through text-slate-500' : 'text-slate-200'}`}>{taskName}</p>
-                                                <div className="flex items-center gap-2 mt-1.5">
-                                                  <span className="text-[10px] bg-blue-500/15 border border-blue-500/30 text-blue-400 px-2 py-0.5 rounded font-semibold">
-                                                    👤 {assignee}
-                                                  </span>
-                                                  <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-medium">
-                                                    ⏰ {deadline}
-                                                  </span>
-                                                </div>
-                                              </div>
-                                            </div>
-                                            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0">
-                                              95% Conf
-                                            </span>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
+                                  <div className="pt-2 border-t border-slate-800">
+                                    <TaskManager actions={summary.actions} meetingId={meetingId} />
                                   </div>
                                 )}
                                 {!summary.summary && !summary.actions && (
