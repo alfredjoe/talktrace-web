@@ -4,6 +4,7 @@ import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Check, Square }
 import Analytics from './Analytics';
 import GlobalSearch from './GlobalSearch';
 import TaskManager from './TaskManager';
+import CalendarSync from './CalendarSync';
 import forge from 'node-forge';
 import { jsPDF } from "jspdf";
 import streamSaver from 'streamsaver';
@@ -1039,7 +1040,10 @@ export default function Dashboard() {
           Your Meeting Library
         </h2>
 
-        {/* Global RAG Search Bar */}
+        {/* Calendar Sync & Auto-Join Module */}
+        <div className="mb-6">
+          <CalendarSync user={user} />
+        </div>
         <div className="mb-6">
           <GlobalSearch
             meetings={meetings}
