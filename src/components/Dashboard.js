@@ -1375,6 +1375,26 @@ export default function Dashboard() {
                 )}
               </div>
 
+              {/* Duplicate Meeting Warning Notification */}
+              {status === 'duplicate_detected' && (
+                <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-300 animate-in fade-in slide-in-from-top-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 font-bold text-lg">
+                      ⚠️
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-200 uppercase tracking-wider">Duplicate Meeting Detected (100% Hash Match)</h4>
+                      <p className="text-xs text-amber-300/90 mt-0.5">This transcript matches an existing recorded session archive in your vault.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setStatus('complete')} className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow cursor-pointer">
+                      Process Anyway
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {status === 'complete' && !audioUrl && (
                 <div className="flex gap-4 mb-6">
                   <div className="text-slate-400 text-sm animate-pulse">Decrypting Audio Stream...</div>
