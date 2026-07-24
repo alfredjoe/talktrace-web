@@ -1519,12 +1519,15 @@ export default function Dashboard() {
               </div>
 
               {/* STATUS STEPPER & PROGRESS UI */}
-              <div className="mb-6 px-4 py-6 bg-slate-900/60 border border-slate-800 rounded-xl relative overflow-hidden">
+              <div className="mb-6 px-6 py-7 bg-slate-900/80 border border-slate-700/80 rounded-2xl relative overflow-hidden backdrop-blur-xl shadow-2xl shine-effect">
+                {/* Background Glow */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+
                 <div className="flex flex-col md:flex-row justify-between relative gap-6 md:gap-0 z-10">
                   {/* Connection Line (Desktop) */}
-                  <div className="hidden md:block absolute top-[18px] left-8 right-8 h-1 bg-slate-800 -z-10 rounded-full overflow-hidden">
+                  <div className="hidden md:block absolute top-[20px] left-10 right-10 h-1.5 bg-slate-800/80 -z-10 rounded-full overflow-hidden border border-slate-700/50">
                     <div 
-                      className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-700"
+                      className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400 transition-all duration-700 shadow-lg shadow-blue-500/50"
                       style={{ width: status === 'joining' ? '20%' : status === 'active' ? '45%' : status === 'processing' ? (statusMessage.includes('Summary') ? '80%' : '65%') : status === 'complete' ? '100%' : '0%' }}
                     />
                   </div>
@@ -1536,42 +1539,51 @@ export default function Dashboard() {
                     { l: 'Summary Creation', s: (status === 'processing' && statusMessage.includes('Summary')) ? 'active' : (status === 'complete' ? 'done' : 'wait') },
                     { l: 'Completed', s: status === 'complete' ? 'done' : 'wait' }
                   ].map((step, i) => (
-                    <div key={i} className="flex md:flex-col items-center gap-4 md:gap-3 bg-[#181818] md:bg-transparent rounded-lg p-3 md:p-0 border border-white/5 md:border-none backdrop-blur-md">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 z-10 transition-all duration-500 ${step.s === 'done' ? 'bg-[#1DB954] border-[#1DB954] shadow-[0_0_12px_rgba(30,215,96,0.5)]' :
-                        step.s === 'active' ? 'bg-[#121212] border-[#1ED760] shadow-[0_0_15px_rgba(30,215,96,0.7)] animate-pulse' :
-                          'bg-[#121212] border-[#282828]'
-                        }`}>
-                        {step.s === 'done' ? <Check className="w-5 h-5 text-black font-extrabold" /> :
-                          step.s === 'active' ? <div className="w-3 h-3 rounded-full bg-[#1ED760] animate-ping" /> :
-                            <div className="w-2 h-2 rounded-full bg-[#282828]" />
+                    <div key={i} className="flex md:flex-col items-center gap-4 md:gap-3 bg-slate-950/60 md:bg-transparent rounded-xl p-3.5 md:p-0 border border-slate-800 md:border-none backdrop-blur-md">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 z-10 transition-all duration-500 ${
+                        step.s === 'done' ? 'bg-gradient-to-br from-blue-600 to-indigo-600 border-blue-400/60 shadow-lg shadow-blue-500/30' :
+                        step.s === 'active' ? 'bg-slate-900 border-cyan-400 shadow-xl shadow-cyan-500/40 glow-pulse-ring' :
+                        'bg-slate-950 border-slate-800'
+                      }`}>
+                        {step.s === 'done' ? <Check className="w-5 h-5 text-white font-black" /> :
+                          step.s === 'active' ? <div className="w-3.5 h-3.5 rounded-full bg-cyan-400 animate-ping" /> :
+                            <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />
                         }
                       </div>
-                      <span className={`text-xs font-bold tracking-wide ${step.s === 'done' ? 'text-[#1ED760]' :
-                        step.s === 'active' ? 'text-[#1DB954]' :
-                          'text-zinc-500'
-                        }`}>{step.l}</span>
+                      <span className={`text-xs font-bold tracking-wide transition-colors ${
+                        step.s === 'done' ? 'text-blue-400' :
+                        step.s === 'active' ? 'text-cyan-300 font-extrabold animate-pulse' :
+                        'text-slate-500'
+                      }`}>{step.l}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* PROGRESS UI */}
+                {/* PROGRESS BAR & ANIMATED SOUNDWAVES */}
                 {['joining', 'active', 'processing'].includes(status) && (
-                  <div className="mt-8 max-w-xl mx-auto p-4 bg-slate-900/90 border border-slate-700/80 rounded-2xl relative overflow-hidden shadow-inner animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="flex justify-between items-center text-xs font-semibold mb-2 px-1">
-                      <span className="text-blue-400 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                        <span>{statusMessage || (status === 'joining' ? 'Bot Joining Meeting...' : status === 'active' ? 'Recording Meeting Audio Stream...' : 'Processing & Summarizing Transcript...')}</span>
+                  <div className="mt-8 max-w-xl mx-auto p-4 bg-slate-950/80 border border-slate-700/80 rounded-2xl relative overflow-hidden shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-3 duration-300">
+                    <div className="flex justify-between items-center text-xs font-bold mb-2.5 px-1">
+                      <span className="text-cyan-400 flex items-center gap-2">
+                        {/* Live Soundwave Bars */}
+                        <div className="flex items-center gap-0.5 h-3">
+                          <div className="w-1 bg-cyan-400 rounded-full animate-bounce [animation-delay:0.1s] h-full" />
+                          <div className="w-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.3s] h-2" />
+                          <div className="w-1 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s] h-3" />
+                        </div>
+                        <span className="font-semibold text-slate-200">{statusMessage || (status === 'joining' ? 'Bot Joining Meeting...' : status === 'active' ? 'Recording Live Audio Stream...' : 'Processing & Summarizing Transcript...')}</span>
                       </span>
-                      <span className="text-slate-400 font-mono text-[11px]">
+                      <span className="text-cyan-400 font-mono text-xs font-black">
                         {status === 'joining' ? '25%' : status === 'active' ? '55%' : (statusMessage.includes('Summary') ? '85%' : '70%')}
                       </span>
                     </div>
 
-                    <div className="relative w-full h-3 bg-slate-950 rounded-full border border-slate-800 overflow-hidden">
+                    <div className="relative w-full h-3.5 bg-slate-900 rounded-full border border-slate-800 overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 transition-all duration-700 rounded-full"
+                        className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-400 transition-all duration-700 rounded-full shadow-lg shadow-cyan-500/40 relative overflow-hidden"
                         style={{ width: status === 'joining' ? '25%' : status === 'active' ? '55%' : (statusMessage.includes('Summary') ? '85%' : '70%') }}
-                      />
+                      >
+                        <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                      </div>
                     </div>
                   </div>
                 )}
