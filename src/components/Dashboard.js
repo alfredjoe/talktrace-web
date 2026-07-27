@@ -6,6 +6,7 @@ import GlobalSearch from './GlobalSearch';
 import TaskManager from './TaskManager';
 import CalendarSync from './CalendarSync';
 import CyberDashboard from './CyberDashboard';
+import NeuralLattice from './NeuralLattice';
 import forge from 'node-forge';
 import { jsPDF } from "jspdf";
 import streamSaver from 'streamsaver';
@@ -1040,6 +1041,11 @@ export default function Dashboard() {
           <List className="w-5 h-5 text-indigo-400" />
           Your Meeting Library
         </h2>
+
+        {/* Neural Lattice Topology Spatial Canvas Showcase */}
+        <div className="mb-8">
+          <NeuralLattice />
+        </div>
 
         {/* Hyper-Futuristic Cybernetic Workspace Showcase */}
         <div className="mb-8">

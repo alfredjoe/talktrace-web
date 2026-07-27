@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TalkTrace // Neural Lattice Spatial Topology</title>
+
+  <!-- Google Fonts: Outfit & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-cosmic: #030712;
+      --card-glass: rgba(15, 23, 42, 0.65);
+      --border-glass: rgba(245, 158, 11, 0.2);
+      --holo-gold: #F59E0B;
+      --plasma-blue: #3B82F6;
+      --glowing-emerald: #10B981;
+      --neon-cyan: #06B6D4;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --font-ui: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-cosmic);
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.12) 0%, transparent 65%),
+        radial-gradient(circle at 20% 80%, rgba(245, 158, 11, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 45%);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Top Header Bar */
+    header {
+      position: absolute;
+      top: 1.5rem;
+      left: 2rem;
+      right: 2rem;
+      z-index: 20;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-glass);
+      border-radius: 20px;
+      padding: 1rem 1.75rem;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-orb {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--holo-gold) 0%, var(--plasma-blue) 100%);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #FFFFFF, var(--holo-gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: var(--glowing-emerald);
+      padding: 0.45rem 1rem;
+      border-radius: 30px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--glowing-emerald);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--glowing-emerald);
+      animation: pulse 1.5s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.4; }
+    }
+
+    /* Canvas & Nodes Spatial Stage */
+    #spatialStage {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    svg.energy-lines {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .energy-line {
+      stroke: url(#plasmaGradient);
+      stroke-width: 2;
+      stroke-dasharray: 6, 6;
+      animation: dashFlow 20s linear infinite;
+    }
+
+    @keyframes dashFlow {
+      to { stroke-dashoffset: -1000; }
+    }
+
+    /* Central Security Sphere */
+    .central-security-node {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(245, 158, 11, 0.8), rgba(59, 130, 246, 0.4) 60%, rgba(3, 7, 18, 0.9));
+      box-shadow: 0 0 50px rgba(245, 158, 11, 0.4), 0 0 100px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.4);
+      border: 2px solid rgba(245, 158, 11, 0.6);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      animation: floatSphere 4s infinite ease-in-out;
+      transition: all 0.4s ease;
+    }
+
+    .central-security-node:hover {
+      transform: translate(-50%, -50%) scale(1.1);
+      box-shadow: 0 0 80px rgba(245, 158, 11, 0.7), 0 0 140px rgba(59, 130, 246, 0.5);
+    }
+
+    @keyframes floatSphere {
+      0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+      50% { transform: translate(-50%, -50%) translateY(-10px); }
+    }
+
+    .sphere-icon {
+      width: 32px;
+      height: 32px;
+      fill: none;
+      stroke: #FFF;
+      stroke-width: 2;
+    }
+
+    .sphere-lbl {
+      font-size: 0.65rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: #FFF;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+      text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+    }
+
+    /* Floating Speaker Nodes */
+    .speaker-node {
+      position: absolute;
+      background: var(--card-glass);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-glass);
+      border-radius: 18px;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      cursor: pointer;
+      z-index: 8;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+      transition: all 0.3s ease;
+      animation: floatNode 5s infinite ease-in-out;
+    }
+
+    .speaker-node:hover {
+      transform: scale(1.08) translateY(-4px);
+      border-color: var(--holo-gold);
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.4);
+    }
+
+    @keyframes floatNode {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .node-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      color: #000;
+    }
+
+    .spk-node-1 .node-avatar { background: var(--holo-gold); box-shadow: 0 0 15px var(--holo-gold); }
+    .spk-node-2 .node-avatar { background: var(--plasma-blue); color: #FFF; box-shadow: 0 0 15px var(--plasma-blue); }
+    .spk-node-3 .node-avatar { background: var(--glowing-emerald); box-shadow: 0 0 15px var(--glowing-emerald); }
+
+    .node-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .node-name {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #FFF;
+    }
+
+    .node-role {
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    /* Floating Glass Drawer / Modal */
+    .drawer-overlay {
+      position: absolute;
+      top: 0; right: 0; bottom: 0; width: 420px;
+      background: rgba(8, 14, 26, 0.85);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-left: 1px solid var(--border-glass);
+      z-index: 30;
+      padding: 2.5rem 2rem;
+      transform: translateX(100%);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .drawer-overlay.active {
+      transform: translateX(0);
+    }
+
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .drawer-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--holo-gold);
+    }
+
+    .btn-close {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #FFF;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .segment-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 1rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .segment-time {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--holo-gold);
+      margin-bottom: 0.4rem;
+      display: block;
+    }
+
+    /* Modal for Central Security Sphere */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.8);
+      backdrop-filter: blur(16px);
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--holo-gold);
+      border-radius: 24px;
+      padding: 2rem;
+      width: 90%;
+      max-width: 520px;
+      box-shadow: 0 0 50px rgba(245, 158, 11, 0.3);
+    }
+
+    .modal-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--holo-gold);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .hash-field {
+      background: rgba(3, 7, 18, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--glowing-emerald);
+      word-break: break-all;
+      margin: 1rem 0;
+    }
+
+    /* Radial Bottom Control Bar */
+    .control-halo {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      background: var(--card-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-glass);
+      border-radius: 40px;
+      padding: 0.6rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .halo-input {
+      background: rgba(3, 7, 18, 0.8);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 20px;
+      padding: 0.6rem 1.2rem;
+      color: #FFF;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      outline: none;
+      width: 280px;
+    }
+
+    .halo-btn {
+      background: linear-gradient(135deg, var(--holo-gold), var(--plasma-blue));
+      border: none;
+      color: #000;
+      font-weight: 800;
+      font-size: 0.8rem;
+      padding: 0.65rem 1.4rem;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+    }
+
+    .halo-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(245, 158, 11, 0.7);
+    }
+
+    .view-toggle {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #FFF;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      padding: 0.5rem 0.9rem;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Bar -->
+  <header>
+    <div class="brand">
+      <div class="brand-orb">⚡</div>
+      <span class="brand-title">TalkTrace Topology</span>
+    </div>
+
+    <div class="status-badge">
+      <div class="pulse-dot"></div>
+      <span>Zero-Knowledge Mode Active</span>
+    </div>
+  </header>
+
+  <!-- Spatial Canvas & Nodes -->
+  <div id="spatialStage">
+    <!-- SVG Energy Connection Lines -->
+    <svg class="energy-lines">
+      <defs>
+        <linearGradient id="plasmaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#F59E0B" />
+          <stop offset="50%" stop-color="#3B82F6" />
+          <stop offset="100%" stop-color="#10B981" />
+        </linearGradient>
+      </defs>
+      <line id="line1" class="energy-line" x1="50%" y1="50%" x2="25%" y2="30%" />
+      <line id="line2" class="energy-line" x1="50%" y1="50%" x2="75%" y2="28%" />
+      <line id="line3" class="energy-line" x1="50%" y1="50%" x2="30%" y2="70%" />
+    </svg>
+
+    <!-- Central Security Sphere Node -->
+    <div class="central-security-node" onclick="openSecurityModal()">
+      <svg class="sphere-icon" viewBox="0 0 24 24"><path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/></svg>
+      <span class="sphere-lbl">AES-256 Vault</span>
+    </div>
+
+    <!-- Floating Speaker Node 1 -->
+    <div class="speaker-node spk-node-1" style="top: 25%; left: 20%;" onclick="openSpeakerDrawer('Abin George', 'Host / Lead Architect')">
+      <div class="node-avatar">AG</div>
+      <div class="node-info">
+        <span class="node-name">Abin George</span>
+        <span class="node-role">Host / Lead Architect</span>
+      </div>
+    </div>
+
+    <!-- Floating Speaker Node 2 -->
+    <div class="speaker-node spk-node-2" style="top: 23%; right: 20%;" onclick="openSpeakerDrawer('Sarah Jenkins', 'Engineering Lead')">
+      <div class="node-avatar">SJ</div>
+      <div class="node-info">
+        <span class="node-name">Sarah Jenkins</span>
+        <span class="node-role">Engineering Lead</span>
+      </div>
+    </div>
+
+    <!-- Floating Speaker Node 3 -->
+    <div class="speaker-node spk-node-3" style="top: 65%; left: 24%;" onclick="openSpeakerDrawer('David Miller', 'Security Auditor')">
+      <div class="node-avatar">DM</div>
+      <div class="node-info">
+        <span class="node-name">David Miller</span>
+        <span class="node-role">Security Auditor</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Radial Bottom Control Bar -->
+  <div class="control-halo">
+    <input type="text" class="halo-input" value="https://meet.google.com/abc-defg-hij" placeholder="Paste Meeting URL...">
+    <button class="halo-btn" onclick="injectBotSim()">Inject Bot</button>
+    <button class="view-toggle" onclick="toggleSimNode()">+ Add Node Sim</button>
+  </div>
+
+  <!-- Floating Speaker Drawer -->
+  <div class="drawer-overlay" id="speakerDrawer">
+    <div class="drawer-header">
+      <div>
+        <h3 class="drawer-title" id="drawerSpeakerName">Abin George</h3>
+        <span style="font-size: 0.75rem; color: var(--text-muted);" id="drawerSpeakerRole">Host / Lead Architect</span>
+      </div>
+      <button class="btn-close" onclick="closeSpeakerDrawer()">✕</button>
+    </div>
+
+    <div class="segment-card">
+      <span class="segment-time">00:04</span>
+      <p>"Welcome team. Auditing zero-knowledge vault and client-side sentence vector embeddings RAG engine."</p>
+    </div>
+
+    <div class="segment-card">
+      <span class="segment-time">00:32</span>
+      <p>"Exporting action items directly to GitHub and Jira boards."</p>
+    </div>
+  </div>
+
+  <!-- Central Security Sphere Modal -->
+  <div class="modal-overlay" id="securityModal">
+    <div class="modal-box">
+      <h3 class="modal-title">🛡️ Zero-Knowledge Security Vault</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Real-time Client-Side SHA-256 Data Integrity Verification Hash:</p>
+      
+      <div class="hash-field">
+        8a7f92bc3e1d4590a1f87e24b901c563e4129b09f7a83c1d92e541b2a90187c3
+      </div>
+
+      <p style="font-size: 0.8rem; color: var(--glowing-emerald);">✓ Pyannote Diarization & Whisper Local Assembly Active</p>
+
+      <button class="halo-btn" style="width: 100%; margin-top: 1.5rem;" onclick="closeSecurityModal()">Close Vault Specs</button>
+    </div>
+  </div>
+
+  <script>
+    function openSpeakerDrawer(name, role) {
+      document.getElementById('drawerSpeakerName').innerText = name;
+      document.getElementById('drawerSpeakerRole').innerText = role;
+      document.getElementById('speakerDrawer').classList.add('active');
+    }
+
+    function closeSpeakerDrawer() {
+      document.getElementById('speakerDrawer').classList.remove('active');
+    }
+
+    function openSecurityModal() {
+      document.getElementById('securityModal').classList.add('active');
+    }
+
+    function closeSecurityModal() {
+      document.getElementById('securityModal').classList.remove('active');
+    }
+
+    function injectBotSim() {
+      alert("Bot Injected successfully into meeting room!");
+    }
+
+    function toggleSimNode() {
+      const stage = document.getElementById('spatialStage');
+      const newNode = document.createElement('div');
+      newNode.className = 'speaker-node spk-node-2';
+      newNode.style.top = '62%';
+      newNode.style.right = '22%';
+      newNode.innerHTML = `
+        <div class="node-avatar">AI</div>
+        <div class="node-info">
+          <span class="node-name">AI Assistant</span>
+          <span class="node-role">Note-Taker Bot</span>
+        </div>
+      `;
+      newNode.onclick = () => openSpeakerDrawer('AI Assistant', 'Note-Taker Bot');
+      stage.appendChild(newNode);
+    }
+  </script>
+</body>
+</html>
