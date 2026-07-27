@@ -1156,13 +1156,27 @@ export default function Dashboard() {
               {meetingId && view === 'new' ? `Meeting ${meetingId.substr(0, 8)}...` : 'New Session'}
             </button>
             <button
+              onClick={() => setView('spatial')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${view === 'spatial' ? 'bg-gradient-to-r from-amber-500 to-blue-500 text-slate-950 font-black shadow-lg shadow-amber-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+            >
+              <span>🌌 Spatial Topology</span>
+            </button>
+
+            <button
+              onClick={() => setView('cyber')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${view === 'cyber' ? 'bg-gradient-to-r from-cyan-400 to-purple-600 text-white font-black shadow-lg shadow-cyan-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+            >
+              <span>⚡ Cyber Dashboard</span>
+            </button>
+
+            <button
               onClick={() => {
                 setView('library');
                 fetchMeetings();
                 const newUrl = `${window.location.pathname}?view=library`;
                 window.history.pushState({ path: newUrl }, '', newUrl);
               }}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${view === 'library' ? 'btn-sleek-primary text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${view === 'library' ? 'btn-sleek-primary text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
             >
               <List className="w-4 h-4" />
               Previous Work
@@ -1181,7 +1195,15 @@ export default function Dashboard() {
         </header>
 
         <main className="space-y-8">
-          {view === 'library' ? renderLibrary() : (
+          {view === 'spatial' ? (
+            <div className="animate-in fade-in duration-300">
+              <NeuralLattice />
+            </div>
+          ) : view === 'cyber' ? (
+            <div className="animate-in fade-in duration-300">
+              <CyberDashboard />
+            </div>
+          ) : view === 'library' ? renderLibrary() : (
             <>
               {/* Connection Card */}
               {!meetingId && (
