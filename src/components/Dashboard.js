@@ -5,6 +5,7 @@ import Analytics from './Analytics';
 import GlobalSearch from './GlobalSearch';
 import TaskManager from './TaskManager';
 import CalendarSync from './CalendarSync';
+import CyberDashboard from './CyberDashboard';
 import forge from 'node-forge';
 import { jsPDF } from "jspdf";
 import streamSaver from 'streamsaver';
@@ -1039,6 +1040,11 @@ export default function Dashboard() {
           <List className="w-5 h-5 text-indigo-400" />
           Your Meeting Library
         </h2>
+
+        {/* Hyper-Futuristic Cybernetic Workspace Showcase */}
+        <div className="mb-8">
+          <CyberDashboard />
+        </div>
 
         {/* Calendar Sync & Auto-Join Module */}
         <div className="mb-6">
