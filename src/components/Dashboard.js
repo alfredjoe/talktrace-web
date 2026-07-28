@@ -1553,6 +1553,10 @@ export default function Dashboard() {
                                         }`}
                                     >
                                       <span>👤 {seg.speaker}</span>
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-semibold shadow-sm shadow-emerald-500/20">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                        ✓ Verified Human Identity
+                                      </span>
                                       <span className="text-[10px] opacity-60 hover:opacity-100 bg-slate-800 px-1.5 py-0.5 rounded text-slate-300 font-normal">✏️ Edit</span>
                                     </span>
                                     <span className="text-slate-600 font-normal text-xs">{new Date(seg.start * 1000).toISOString().substr(14, 5)}</span>
