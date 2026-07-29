@@ -15,14 +15,18 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
-        // Sync profile to Firestore users collection
-        await createUserProfile(u.uid, {
-          email: u.email,
-          name: u.displayName || u.email.split('@')[0],
-          emailVerified: u.emailVerified
-        });
-        const userProf = await getUserProfile(u.uid);
-        setProfile(userProf);
+        try {
+          // Sync profile to Firestore users collection
+          await createUserProfile(u.uid, {
+            email: u.email,
+            name: u.displayName || u.email.split('@')[0],
+            emailVerified: u.emailVerified
+          });
+          const userProf = await getUserProfile(u.uid);
+          setProfile(userProf);
+        } catch (err) {
+          console.warn("Firestore user profile sync warning:", err);
+        }
       } else {
         setProfile(null);
       }
