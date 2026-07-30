@@ -1,15 +1,14 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
-import { Mail, ArrowRight, Mic, Sparkles, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Mail, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
