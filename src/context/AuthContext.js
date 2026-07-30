@@ -12,28 +12,38 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
+      setLoading(false);
+
       if (u) {
-        try {
-          // Sync profile to Firestore users collection
-          await createUserProfile(u.uid, {
-            email: u.email,
-            name: u.displayName || u.email.split('@')[0],
-            emailVerified: u.emailVerified
+        // Sync profile in background without blocking Auth loading state
+        createUserProfile(u.uid, {
+          email: u.email,
+          name: u.displayName || u.email.split('@')[0],
+          emailVerified: u.emailVerified
+        })
+          .then(() => getUserProfile(u.uid))
+          .then((userProf) => {
+            if (userProf) setProfile(userProf);
+          })
+          .catch((err) => {
+            console.warn("Firestore user profile sync warning:", err);
           });
-          const userProf = await getUserProfile(u.uid);
-          setProfile(userProf);
-        } catch (err) {
-          console.warn("Firestore user profile sync warning:", err);
-        }
       } else {
         setProfile(null);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Fallback safety timeout: ensure loading state is cleared after 1.5s max
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1500);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
   }, []);
 
   const resendVerificationEmail = async () => {
