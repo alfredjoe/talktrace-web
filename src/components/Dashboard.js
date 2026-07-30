@@ -1603,6 +1603,22 @@ export default function Dashboard() {
                         ) : (
                           // READ MODE: Diarized View
                           <div className="w-full h-80 bg-slate-950 p-4 rounded-lg border border-slate-800 overflow-y-auto space-y-4 relative">
+                            {detectedLanguage && (
+                              <div className="flex items-center justify-between mb-3 px-3 py-2 bg-slate-900/90 rounded-lg border border-slate-800">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                  <span className="text-xs font-bold text-slate-300">
+                                    Language: <span className="text-emerald-400 font-mono">{detectedLanguage === 'ml' ? 'Malayalam (ml)' : detectedLanguage === 'en' ? 'English (en)' : detectedLanguage.toUpperCase()}</span>
+                                  </span>
+                                </div>
+                                {detectedLanguage === 'ml' && (
+                                  <span className="text-[11px] font-semibold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/30">
+                                    🇮🇳 Malayalam (മലയാളം) Script Verified
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
                             {viewingVersion && (
                               <div className="sticky top-0 z-10 bg-slate-800/90 text-slate-300 text-xs px-4 py-2 rounded mb-4 shadow-lg backdrop-blur-sm border border-slate-700/50 flex justify-between items-center">
                                 <span className="flex items-center gap-2">
@@ -1639,7 +1655,7 @@ export default function Dashboard() {
                                     </span>
                                     <span className="text-slate-600 font-normal text-xs">{new Date(seg.start * 1000).toISOString().substr(14, 5)}</span>
                                   </div>
-                                  <p className="text-slate-300 text-sm pl-0">{seg.text}</p>
+                                  <p className="text-slate-200 text-sm leading-relaxed font-sans pl-0">{seg.text}</p>
                                 </div>
                               );
                             })}
