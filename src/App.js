@@ -4,6 +4,8 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import Dashboard from './components/Dashboard';
 
+import ForgotPassword from './components/ForgotPassword';
+
 function AppRoutes() {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center text-xl text-white">Loading...</div>;
@@ -12,6 +14,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
       <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/dashboard" />} />
+      <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/dashboard" />} />
       <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
       <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
     </Routes>

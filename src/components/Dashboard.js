@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Check, Square } from 'lucide-react';
+import { Mic, Link2, Download, LogOut, List, CheckCircle, Clock, Check, Square, KeyRound } from 'lucide-react';
 import Analytics from './Analytics';
 import GlobalSearch from './GlobalSearch';
 import TaskManager from './TaskManager';
 import CalendarSync from './CalendarSync';
+import ChangePasswordModal from './ChangePasswordModal';
 import forge from 'node-forge';
 import { jsPDF } from "jspdf";
 import streamSaver from 'streamsaver';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [meetingLink, setMeetingLink] = useState('');
   const [status, setStatus] = useState('idle'); // idle, joining, active, processing, complete
   const [meetingId, setMeetingId] = useState(null);
@@ -1244,16 +1246,32 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="text-right hidden md:block">
               <p className="text-sm font-semibold text-white">{user?.email}</p>
               <p className="text-xs text-emerald-400 font-medium">● Authenticated</p>
             </div>
-            <button onClick={logout} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-              <LogOut className="w-5 h-5 text-slate-400" />
+            <button
+              onClick={() => setIsChangePasswordOpen(true)}
+              title="Change Password"
+              className="p-2 hover:bg-white/10 text-slate-400 hover:text-blue-400 rounded-full transition-colors cursor-pointer"
+            >
+              <KeyRound className="w-5 h-5" />
+            </button>
+            <button
+              onClick={logout}
+              title="Sign Out"
+              className="p-2 hover:bg-white/10 text-slate-400 hover:text-red-400 rounded-full transition-colors cursor-pointer"
+            >
+              <LogOut className="w-5 h-5" />
             </button>
           </div>
         </header>
+
+        <ChangePasswordModal
+          isOpen={isChangePasswordOpen}
+          onClose={() => setIsChangePasswordOpen(false)}
+        />
 
         <main className="space-y-8">
           {view === 'library' ? renderLibrary() : (
